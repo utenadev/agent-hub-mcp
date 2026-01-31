@@ -29,6 +29,11 @@ func Open(path string) (*DB, error) {
 
 	db := &DB{DB: sqlDB}
 
+	// Enable WAL mode for better concurrent access
+	if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
+	}
+
 	// Create schema
 	if err := db.CreateSchema(); err != nil {
 		return nil, fmt.Errorf("failed to create schema: %w", err)

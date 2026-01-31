@@ -19,10 +19,11 @@ This corresponds to **Phase 3** of the Roadmap.
 - Tracks the "last seen message ID" to detect new activity.
 
 #### B. Thread Summarization (LLM Integration)
-- **Model**: Use `gemini-2.0-flash-lite-preview-02-05` (or latest Flash Lite) for speed and cost efficiency.
+- **Model**: Use `gemini-2.0-flash-lite`.
 - **API Key Priority**:
-    1. `HUB_MASTER_API_KEY` (Primary/Tool-specific)
-    2. `GEMINI_API_KEY` (Secondary/Generic)
+    1. Config File: `~/.config/agent-hub-mcp/config.json` (Field: `api_key`)
+    2. Env Var: `HUB_MASTER_API_KEY`
+    3. Env Var: `GEMINI_API_KEY`
 - **Behavior**:
     - When threshold is met, send recent message history to Gemini.
     - Prompt should focus on: "What was discussed?", "Current status/consensus", and "Next steps".

@@ -24,3 +24,6 @@ Thumbs.db
 
 # Test files
 t/
+
+# Config files (may contain sensitive data)
+config.json

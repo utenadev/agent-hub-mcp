@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -175,7 +176,7 @@ func TestCheckTopicWithNewMessages(t *testing.T) {
 	}
 
 	// Check for new messages
-	if err := orc.checkTopic(topicID); err != nil {
+	if err := orc.checkTopic(context.Background(), topicID); err != nil {
 		t.Fatalf("checkTopic failed: %v", err)
 	}
 
@@ -257,7 +258,7 @@ func TestGenerateSummary(t *testing.T) {
 	orc.mu.Unlock()
 
 	// Generate summary
-	if err := orc.generateSummary(topicID); err != nil {
+	if err := orc.generateSummary(context.Background(), topicID); err != nil {
 		t.Fatalf("generateSummary failed: %v", err)
 	}
 

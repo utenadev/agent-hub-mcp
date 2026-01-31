@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 	"github.com/yklcs/agent-hub-mcp/internal/hub"
@@ -69,8 +72,23 @@ func runOrchestrator() {
 
 	fmt.Printf("Orchestrator started with database: %s\n", *dbPath)
 
+	// Create context with cancellation for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle interrupt signals
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		log.Println("\nReceived interrupt signal, shutting down...")
+		cancel()
+	}()
+
 	orchestrator := hub.NewOrchestrator(database, hub.DefaultConfig())
-	if err := orchestrator.Start(); err != nil {
+	if err := orchestrator.Start(ctx); err != nil && err != context.Canceled {
 		log.Fatalf("Orchestrator error: %v", err)
 	}
+
+	log.Println("Orchestrator stopped")
 }

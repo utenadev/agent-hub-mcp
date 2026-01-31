@@ -1,19 +1,29 @@
 package hub
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+
+	"google.golang.org/genai"
 
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
 // Config holds the orchestrator configuration.
 type Config struct {
-	PollInterval    time.Duration // How often to check for new messages
+	PollInterval     time.Duration // How often to check for new messages
 	SummaryThreshold int           // Number of messages before triggering a summary
 	InactivityTimeout time.Duration // Time of no activity before nudging
+	// LLM Configuration
+	Model         string // Gemini model to use for summarization
+	APIKey        string // API key for Gemini (overrides env vars)
 }
 
 // DefaultConfig returns the default orchestrator configuration.
@@ -22,19 +32,60 @@ func DefaultConfig() *Config {
 		PollInterval:     5 * time.Second,
 		SummaryThreshold: 5,
 		InactivityTimeout: 5 * time.Minute,
+		Model:            "gemini-2.0-flash-lite",
 	}
+}
+
+// getAPIKey returns the API key based on priority:
+// 1. Config File: ~/.config/agent-hub-mcp/config.json (Field: api_key)
+// 2. Config.APIKey (explicitly set)
+// 3. HUB_MASTER_API_KEY (tool-specific)
+// 4. GEMINI_API_KEY (generic)
+// Also returns the source name for logging.
+func (c *Config) getAPIKey() (key string, source string) {
+	// 1. Try config file
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		configPath := filepath.Join(homeDir, ".config", "agent-hub-mcp", "config.json")
+		if data, err := os.ReadFile(configPath); err == nil {
+			var config struct {
+				APIKey string `json:"api_key"`
+			}
+			if json.Unmarshal(data, &config) == nil && config.APIKey != "" {
+				return config.APIKey, "Config File (~/.config/agent-hub-mcp/config.json)"
+			}
+		}
+	}
+
+	// 2. Try explicit config
+	if c.APIKey != "" {
+		return c.APIKey, "Config.APIKey"
+	}
+
+	// 3. Try HUB_MASTER_API_KEY
+	if key := os.Getenv("HUB_MASTER_API_KEY"); key != "" {
+		return key, "HUB_MASTER_API_KEY"
+	}
+
+	// 4. Try GEMINI_API_KEY
+	if key := os.Getenv("GEMINI_API_KEY"); key != "" {
+		return key, "GEMINI_API_KEY"
+	}
+
+	return "", "none"
 }
 
 // Orchestrator monitors the BBS and provides autonomous services.
 type Orchestrator struct {
 	db     *db.DB
 	config *Config
+	client *genai.Client
 
 	// Track state per topic
-	mu              sync.Mutex
-	lastSeenMsgID   map[int64]int64 // topicID -> messageID
-	topicMsgCount   map[int64]int    // topicID -> message count since last summary
-	lastActivity    map[int64]time.Time // topicID -> last message time
+	mu            sync.Mutex
+	lastSeenMsgID map[int64]int64     // topicID -> messageID
+	topicMsgCount map[int64]int        // topicID -> message count since last summary
+	lastActivity  map[int64]time.Time  // topicID -> last message time
 }
 
 // NewOrchestrator creates a new orchestrator instance.
@@ -51,9 +102,44 @@ func NewOrchestrator(database *db.DB, config *Config) *Orchestrator {
 	}
 }
 
+// Initialize initializes the Orchestrator, setting up the LLM client.
+func (o *Orchestrator) Initialize(ctx context.Context) error {
+	apiKey, source := o.config.getAPIKey()
+	if apiKey == "" {
+		log.Println("Warning: No API key found (HUB_MASTER_API_KEY or GEMINI_API_KEY), using mock summarizer")
+		return nil
+	}
+
+	log.Printf("Using API key from: %s", source)
+
+	// Create Gemini client with API key
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey: apiKey,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Gemini client: %w", err)
+	}
+
+	o.client = client
+	log.Printf("Gemini client initialized (model: %s)", o.config.Model)
+	return nil
+}
+
+// Close closes the Orchestrator's resources.
+func (o *Orchestrator) Close() error {
+	// genai.Client does not require explicit closing
+	return nil
+}
+
 // Start begins the orchestrator monitoring loop.
-func (o *Orchestrator) Start() error {
+func (o *Orchestrator) Start(ctx context.Context) error {
 	log.Println("Orchestrator started")
+
+	// Initialize LLM client
+	if err := o.Initialize(ctx); err != nil {
+		return err
+	}
+	defer o.Close()
 
 	// Initialize topic tracking
 	if err := o.initializeTopics(); err != nil {
@@ -64,13 +150,17 @@ func (o *Orchestrator) Start() error {
 	ticker := time.NewTicker(o.config.PollInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		if err := o.pollOnce(); err != nil {
-			log.Printf("Poll error: %v", err)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Orchestrator stopped")
+			return ctx.Err()
+		case <-ticker.C:
+			if err := o.pollOnce(ctx); err != nil {
+				log.Printf("Poll error: %v", err)
+			}
 		}
 	}
-
-	return nil
 }
 
 // initializeTopics sets up tracking for all existing topics.
@@ -104,14 +194,14 @@ func (o *Orchestrator) initializeTopics() error {
 }
 
 // pollOnce performs a single poll cycle.
-func (o *Orchestrator) pollOnce() error {
+func (o *Orchestrator) pollOnce(ctx context.Context) error {
 	topics, err := o.db.ListTopics()
 	if err != nil {
 		return err
 	}
 
 	for _, topic := range topics {
-		if err := o.checkTopic(int64(topic.ID)); err != nil {
+		if err := o.checkTopic(ctx, int64(topic.ID)); err != nil {
 			log.Printf("Error checking topic %d: %v", topic.ID, err)
 		}
 	}
@@ -120,7 +210,7 @@ func (o *Orchestrator) pollOnce() error {
 }
 
 // checkTopic examines a single topic for new activity.
-func (o *Orchestrator) checkTopic(topicID int64) error {
+func (o *Orchestrator) checkTopic(ctx context.Context, topicID int64) error {
 	o.mu.Lock()
 	lastSeen := o.lastSeenMsgID[topicID]
 	o.mu.Unlock()
@@ -144,7 +234,7 @@ func (o *Orchestrator) checkTopic(topicID int64) error {
 			if int64(msg.ID) > latestMsgID {
 				latestMsgID = int64(msg.ID)
 			}
-			// Parse timestamp (simple parsing for now)
+			// Parse timestamp
 			if latestTime.IsZero() || msg.CreatedAt > latestTime.Format(time.RFC3339) {
 				latestTime, _ = time.Parse(time.RFC3339, msg.CreatedAt)
 			}
@@ -166,7 +256,7 @@ func (o *Orchestrator) checkTopic(topicID int64) error {
 
 		// Check if we should generate a summary
 		if count >= o.config.SummaryThreshold {
-			if err := o.generateSummary(topicID); err != nil {
+			if err := o.generateSummary(ctx, topicID); err != nil {
 				log.Printf("Failed to generate summary for topic %d: %v", topicID, err)
 			}
 		}
@@ -176,7 +266,7 @@ func (o *Orchestrator) checkTopic(topicID int64) error {
 }
 
 // generateSummary creates and posts a summary for the topic.
-func (o *Orchestrator) generateSummary(topicID int64) error {
+func (o *Orchestrator) generateSummary(ctx context.Context, topicID int64) error {
 	log.Printf("Generating summary for topic %d...", topicID)
 
 	// Get recent messages for summarization
@@ -185,8 +275,18 @@ func (o *Orchestrator) generateSummary(topicID int64) error {
 		return err
 	}
 
-	// Mock summarizer - create a simple summary
-	summary := o.mockSummarizer(messages)
+	var summary string
+	if o.client != nil {
+		// Use real LLM
+		summary, err = o.llmSummarizer(ctx, messages)
+		if err != nil {
+			log.Printf("LLM summarization failed, falling back to mock: %v", err)
+			summary = o.mockSummarizer(messages)
+		}
+	} else {
+		// Use mock summarizer
+		summary = o.mockSummarizer(messages)
+	}
 
 	// Post the summary
 	_, err = o.db.PostMessage(topicID, "orchestrator", summary)
@@ -203,8 +303,55 @@ func (o *Orchestrator) generateSummary(topicID int64) error {
 	return nil
 }
 
+// llmSummarizer uses Gemini to create a summary of messages.
+func (o *Orchestrator) llmSummarizer(ctx context.Context, messages []db.Message) (string, error) {
+	if len(messages) == 0 {
+		return "No activity to summarize.", nil
+	}
+
+	// Reverse to get chronological order
+	reverse(messages)
+
+	// Build conversation history
+	var conversation strings.Builder
+	conversation.WriteString("Here is a recent conversation from a BBS topic:\n\n")
+	for i, msg := range messages {
+		conversation.WriteString(fmt.Sprintf("[%d] %s: %s\n", i+1, msg.Sender, msg.Content))
+	}
+	conversation.WriteString("\nPlease provide a concise summary covering:\n")
+	conversation.WriteString("1. What was discussed?\n")
+	conversation.WriteString("2. Current status or consensus\n")
+	conversation.WriteString("3. Next steps or action items\n\n")
+	conversation.WriteString("Format the response with clear sections and bullet points.")
+
+	// Generate content using new SDK pattern
+	contents := genai.Text(conversation.String())
+
+	resp, err := o.client.Models.GenerateContent(ctx, o.config.Model, contents, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate summary: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 {
+		return "", fmt.Errorf("no response from model")
+	}
+
+	// Extract text from response
+	content := resp.Candidates[0].Content
+	if len(content.Parts) == 0 {
+		return "", fmt.Errorf("no parts in response content")
+	}
+	result := content.Parts[0].Text
+	if result == "" {
+		return "", fmt.Errorf("empty text in response")
+	}
+
+	// Add header
+	return fmt.Sprintf("📊 **Orchestrator Summary (Gemini)**\n\n%s", result), nil
+}
+
 // mockSummarizer creates a simple summary of messages.
-// This is a placeholder for future LLM integration.
+// This is a fallback when LLM is not available.
 func (o *Orchestrator) mockSummarizer(messages []db.Message) string {
 	if len(messages) == 0 {
 		return "No activity to summarize."
@@ -220,13 +367,13 @@ func (o *Orchestrator) mockSummarizer(messages []db.Message) string {
 	}
 
 	// Build summary
-	summary := fmt.Sprintf("📊 **Orchestrator Summary**\n\n")
+	summary := fmt.Sprintf("📊 **Orchestrator Summary (Mock)**\n\n")
 	summary += fmt.Sprintf("Activity: %d messages\n", len(messages))
 	summary += "Participants:\n"
 	for sender, count := range senderCounts {
 		summary += fmt.Sprintf("  - %s: %d messages\n", sender, count)
 	}
-	summary += "\n[This is a mock summary. LLM integration coming soon.]"
+	summary += "\n[LLM integration not configured. Set HUB_MASTER_API_KEY or GEMINI_API_KEY to enable AI summarization.]"
 
 	return summary
 }

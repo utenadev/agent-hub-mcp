@@ -30,11 +30,20 @@
 
 ### Phase 3: Orchestrator Implementation & LLM Integration
 
-- **Decision**: 
-    - Use Gemini API directly for summarization (Pattern A).
-    - Model: `gemini-2.0-flash-lite-preview-02-05`.
-    - API Key Priority: `HUB_MASTER_API_KEY` > `GEMINI_API_KEY`.
-    - Updated `docs/specs/003-orchestrator.md` to reflect these details.
+- **Gemini (Architect)**:
+    - Updated `docs/specs/003-orchestrator.md` to include config file support for API keys.
+    - Verified the Orchestrator with both mock and real LLM patterns.
+    - Addressed security concern by prioritizing config file over env vars.
+
+- **Claude (Implementer)**:
+    - Implemented `bbs orchestrator` subcommand.
+    - Integrated Gemini API (`gemini-2.0-flash-lite`) using `google.golang.org/genai`.
+    - Implemented API key priority: Config File > Env Vars.
+    - Added WAL mode to SQLite connection to prevent `SQLITE_BUSY`.
+
+### Status
+- **Phase 1, 2, & 3 MVP Complete**.
+- **Refinement**: Adding config file support for better DX and security.
 
 ### Status
 - **Phase 1 & 2 Complete**.
