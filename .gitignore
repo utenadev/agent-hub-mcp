@@ -1,0 +1,26 @@
+# Binaries
+bin/
+bbs
+dashboard
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Temporary files
+send.sh
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+t/
