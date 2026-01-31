@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -84,4 +85,28 @@ func (s *Server) registerTools() {
 func (s *Server) Serve() error {
 	log.Println("Starting MCP server on stdio...")
 	return server.ServeStdio(s.mcpServer)
+}
+
+// ServeSSE starts the MCP server on an HTTP endpoint with SSE.
+func (s *Server) ServeSSE(addr string) error {
+	log.Printf("Starting MCP server on SSE http://%s...", addr)
+
+	sseServer := server.NewSSEServer(s.mcpServer,
+		server.WithBasePath("/"),
+	)
+
+	mux := http.NewServeMux()
+	mux.Handle("/", sseServer)
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	log.Printf("SSE server listening on %s", addr)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+
+	return nil
 }

@@ -35,6 +35,7 @@ func main() {
 func runServe() {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	dbPath := fs.String("db", "agent-hub.db", "Path to SQLite database")
+	sseAddr := fs.String("sse", "", "Enable SSE mode on address (e.g., :8080)")
 
 	if err := fs.Parse(os.Args[2:]); err != nil {
 		log.Fatal(err)
@@ -48,10 +49,18 @@ func runServe() {
 
 	log.Printf("Database opened: %s", *dbPath)
 
-	server := mcp.NewServer(database)
-	log.Println("Starting MCP server on stdio...")
-	if err := server.Serve(); err != nil {
-		log.Fatalf("Server error: %v", err)
+	srv := mcp.NewServer(database)
+
+	if *sseAddr != "" {
+		log.Printf("Starting MCP server on SSE %s...", *sseAddr)
+		if err := srv.ServeSSE(*sseAddr); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
+	} else {
+		log.Println("Starting MCP server on stdio...")
+		if err := srv.Serve(); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
 	}
 }
 

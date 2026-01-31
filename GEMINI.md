@@ -10,19 +10,20 @@
 - **Database**: SQLite (via `modernc.org/sqlite` - pure Go)
 - **UI**: Bubble Tea (TUI Dashboard)
 
-## Current Status: Phase 3 (Orchestrator) - MVP COMPLETED
+## Current Status: Phase 4 (UI v2 & Robustness) - COMPLETED
 
-Phase 3 has been implemented.
-- **Shared DB Model**: Orchestrator runs as a separate process accessing the same SQLite DB via WAL mode.
-- **Functionality**:
-    - Polling loop monitors topics for new activity.
-    - Mock summarizer posts a summary when message count threshold is reached.
-    - Verified via `bbs orchestrator` command.
+Phase 4 has been implemented.
+- **TUI Dashboard v2**: 3-pane layout (Topics, Messages, Summaries) with navigation support.
+- **Robust Summarization**: 
+    - Incremental summarization (token saving).
+    - Failure recovery (detects Mock summaries and performs full scans).
+    - Summaries are persisted in `topic_summaries` table.
+- **SSE Support**: Basic SSE server implemented (`--sse` flag).
 
 **Next Steps:**
-- Integrate real LLM for summarization (instead of mock).
-- Implement "Inactivity Nudge" logic.
-- Polish TUI to better display these system messages.
+- Standardize SSE Client connection (move away from "backdoor" stdio/sqlite access).
+- Implement manual "Summarize Now" trigger in TUI.
+- Explore local LLM integration (Ollama/llama.cpp) for offline resilience.
 
 ## Architecture
 

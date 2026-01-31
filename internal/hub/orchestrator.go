@@ -269,6 +269,9 @@ func (o *Orchestrator) checkTopic(ctx context.Context, topicID int64) error {
 func (o *Orchestrator) generateSummary(ctx context.Context, topicID int64) error {
 	log.Printf("Generating summary for topic %d...", topicID)
 
+	// Get latest summary to check if chain is broken
+	latestSummary, err := o.db.GetLatestSummary(topicID)
+
 	// Get recent messages for summarization
 	messages, err := o.db.GetMessages(topicID, 50)
 	if err != nil {
@@ -276,19 +279,40 @@ func (o *Orchestrator) generateSummary(ctx context.Context, topicID int64) error
 	}
 
 	var summary string
+	isMock := false
+
 	if o.client != nil {
-		// Use real LLM
-		summary, err = o.llmSummarizer(ctx, messages)
+		// Check if previous summary was Mock (chain broken)
+		if latestSummary != nil && latestSummary.IsMock {
+			log.Printf("Previous summary was Mock, doing full history scan")
+			summary, err = o.llmSummarizer(ctx, messages)
+		} else {
+			// Try incremental summarization
+			if latestSummary != nil {
+				summary, err = o.llmIncrementalSummarizer(ctx, latestSummary.SummaryText, messages)
+			} else {
+				summary, err = o.llmSummarizer(ctx, messages)
+			}
+		}
+
 		if err != nil {
 			log.Printf("LLM summarization failed, falling back to mock: %v", err)
 			summary = o.mockSummarizer(messages)
+			isMock = true
 		}
 	} else {
 		// Use mock summarizer
 		summary = o.mockSummarizer(messages)
+		isMock = true
 	}
 
-	// Post the summary
+	// Save summary to topic_summaries table
+	_, err = o.db.SaveSummary(topicID, summary, isMock)
+	if err != nil {
+		log.Printf("Failed to save summary to topic_summaries: %v", err)
+	}
+
+	// Post the summary to messages
 	_, err = o.db.PostMessage(topicID, "orchestrator", summary)
 	if err != nil {
 		return err
@@ -299,8 +323,57 @@ func (o *Orchestrator) generateSummary(ctx context.Context, topicID int64) error
 	o.topicMsgCount[topicID] = 0
 	o.mu.Unlock()
 
-	log.Printf("Summary posted for topic %d", topicID)
+	log.Printf("Summary posted for topic %d (mock=%v)", topicID, isMock)
 	return nil
+}
+
+// llmIncrementalSummarizer updates an existing summary with new messages.
+func (o *Orchestrator) llmIncrementalSummarizer(ctx context.Context, previousSummary string, messages []db.Message) (string, error) {
+	if len(messages) == 0 {
+		return previousSummary, nil
+	}
+
+	// Reverse to get chronological order
+	reverse(messages)
+
+	// Build incremental prompt
+	var prompt strings.Builder
+	prompt.WriteString("You are maintaining a summary of a BBS conversation.\n\n")
+	prompt.WriteString("** Previous Summary **\n")
+	prompt.WriteString(previousSummary)
+	prompt.WriteString("\n\n** New Messages **\n")
+	for i, msg := range messages {
+		prompt.WriteString(fmt.Sprintf("[%d] %s: %s\n", i+1, msg.Sender, msg.Content))
+	}
+	prompt.WriteString("\n** Task **\n")
+	prompt.WriteString("Please update the summary to incorporate the new messages. ")
+	prompt.WriteString("Maintain the structure and important information from the previous summary, ")
+	prompt.WriteString("while adding new insights, decisions, or action items from the new messages.")
+	prompt.WriteString("Keep it concise and well-organized.")
+
+	// Generate content using new SDK pattern
+	contents := genai.Text(prompt.String())
+
+	resp, err := o.client.Models.GenerateContent(ctx, o.config.Model, contents, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate incremental summary: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 {
+		return "", fmt.Errorf("no response from model")
+	}
+
+	// Extract text from response
+	content := resp.Candidates[0].Content
+	if len(content.Parts) == 0 {
+		return "", fmt.Errorf("no parts in response content")
+	}
+	result := content.Parts[0].Text
+	if result == "" {
+		return "", fmt.Errorf("empty text in response")
+	}
+
+	return fmt.Sprintf("📊 **Orchestrator Summary (Gemini)**\n\n%s", result), nil
 }
 
 // llmSummarizer uses Gemini to create a summary of messages.

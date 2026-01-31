@@ -9,8 +9,8 @@ dashboard
 *.db-wal
 
 # Temporary files
-send.sh
 *.log
+.tmp_watch
 
 # IDE
 .vscode/

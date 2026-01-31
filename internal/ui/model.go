@@ -9,13 +9,16 @@ import (
 
 // Model is the Bubble Tea model for the BBS dashboard.
 type Model struct {
-	db             *db.DB
-	Topics         []db.Topic
-	SelectedTopic  *db.Topic
-	Messages       []db.Message
-	Loading        bool
-	ErrorMessage   string
-	InputMode      InputMode
+	db                  *db.DB
+	Topics              []db.Topic
+	SelectedTopic       *db.Topic
+	Messages            []db.Message
+	Summaries           []db.TopicSummary
+	SelectedSummaryIdx  int
+	FocusPane           FocusPane
+	Loading             bool
+	ErrorMessage        string
+	InputMode           InputMode
 }
 
 // InputMode represents the current input mode.
@@ -24,6 +27,15 @@ type InputMode int
 const (
 	ModeBrowse InputMode = iota
 	ModePost
+)
+
+// FocusPane represents which pane has focus.
+type FocusPane int
+
+const (
+	PaneTopics FocusPane = iota
+	PaneMessages
+	PaneSummaries
 )
 
 // TickMsg is sent periodically to refresh data.
@@ -41,17 +53,26 @@ type MessagesLoadedMsg struct {
 	Error    error
 }
 
+// SummariesLoadedMsg is sent when summaries are loaded.
+type SummariesLoadedMsg struct {
+	Summaries []db.TopicSummary
+	Error     error
+}
+
 // SelectTopicMsg is sent to select a topic.
 type SelectTopicMsg int
 
 // NewModel creates a new BBS dashboard model.
 func NewModel(database *db.DB) Model {
 	return Model{
-		db:        database,
-		Topics:    []db.Topic{},
-		Messages:  []db.Message{},
-		Loading:   true,
-		InputMode: ModeBrowse,
+		db:                 database,
+		Topics:             []db.Topic{},
+		Messages:           []db.Message{},
+		Summaries:          []db.TopicSummary{},
+		SelectedSummaryIdx: 0,
+		FocusPane:          PaneTopics,
+		Loading:            true,
+		InputMode:          ModeBrowse,
 	}
 }
 
@@ -88,10 +109,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Messages = msg.Messages
 		return m, nil
 
+	case SummariesLoadedMsg:
+		if msg.Error != nil {
+			// Don't show error for summaries, just log
+			return m, nil
+		}
+		m.Summaries = msg.Summaries
+		m.SelectedSummaryIdx = 0 // Reset to latest summary
+		return m, nil
+
 	case TopicSelectedMsg:
 		m.SelectedTopic = msg.Topic
 		m.Messages = msg.Messages
-		return m, nil
+		// Load summaries for the selected topic
+		return m, m.loadSummariesCmd()
 
 	case SelectTopicMsg:
 		return m, m.selectTopicCmd(int(msg))
@@ -139,6 +170,36 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Enter post mode
 		m.InputMode = ModePost
 		return m, nil
+
+	case "tab":
+		// Cycle focus between panes
+		switch m.FocusPane {
+		case PaneTopics:
+			m.FocusPane = PaneMessages
+		case PaneMessages:
+			m.FocusPane = PaneSummaries
+		case PaneSummaries:
+			m.FocusPane = PaneTopics
+		}
+		return m, nil
+
+	case "]":
+		// Navigate to newer summary (towards index 0)
+		if m.FocusPane == PaneSummaries && len(m.Summaries) > 0 {
+			if m.SelectedSummaryIdx > 0 {
+				m.SelectedSummaryIdx--
+			}
+		}
+		return m, nil
+
+	case "[":
+		// Navigate to older summary (towards end of list)
+		if m.FocusPane == PaneSummaries && len(m.Summaries) > 0 {
+			if m.SelectedSummaryIdx < len(m.Summaries)-1 {
+				m.SelectedSummaryIdx++
+			}
+		}
+		return m, nil
 	}
 
 	return m, nil
@@ -158,6 +219,20 @@ func (m Model) loadMessagesCmd() tea.Cmd {
 	return func() tea.Msg {
 		messages, err := m.db.GetMessages(int64(m.SelectedTopic.ID), 50)
 		return MessagesLoadedMsg{Messages: messages, Error: err}
+	}
+}
+
+func (m Model) loadSummariesCmd() tea.Cmd {
+	if m.SelectedTopic == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		// Get all summaries for this topic (most recent first)
+	 summaries, err := m.db.GetSummariesByTopic(int64(m.SelectedTopic.ID))
+		if err != nil {
+			return SummariesLoadedMsg{Summaries: []db.TopicSummary{}, Error: err}
+		}
+		return SummariesLoadedMsg{Summaries: summaries}
 	}
 }
 
