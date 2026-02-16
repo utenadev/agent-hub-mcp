@@ -1,6 +1,6 @@
 module github.com/yklcs/agent-hub-mcp
 
-go 1.25.6
+go 1.23
 
 require (
 	cloud.google.com/go/vertexai v0.15.0
