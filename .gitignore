@@ -27,3 +27,7 @@ t/
 
 # Config files (may contain sensitive data)
 config.json
+
+# AGENTS.md - root only tracked, subdirs auto-generated
+**/AGENTS.md
+!/AGENTS.md
