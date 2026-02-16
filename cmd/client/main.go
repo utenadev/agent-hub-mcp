@@ -26,30 +26,44 @@ type ToolCallParams struct {
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
+// ClientApp holds dependencies for testing
+type ClientApp struct {
+	HTTPClient *http.Client
+	BaseURL    string
+}
+
+// NewClientApp creates a new ClientApp with defaults
+func NewClientApp() *ClientApp {
+	return &ClientApp{
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		BaseURL:    "http://localhost:8080",
+	}
+}
+
 func main() {
+	app := NewClientApp()
+	if err := app.Run(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+}
+
+// Run executes the client application
+func (a *ClientApp) Run() error {
 	// Get session ID from SSE
-	resp, err := http.Get("http://localhost:8080/sse")
+	resp, err := a.HTTPClient.Get(a.BaseURL + "/sse")
 	if err != nil {
-		fmt.Printf("Failed to connect to SSE: %v\n", err)
-		return
+		return fmt.Errorf("failed to connect to SSE: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Failed to read SSE response: %v\n", err)
-		return
+		return fmt.Errorf("failed to read SSE response: %w", err)
 	}
 
-	// Parse sessionId from: event: endpoint\ndata: /message?sessionId=xxx
 	sessionID := string(body)
 	fmt.Printf("SSE Response: %s\n", sessionID)
 
-	// For now, extract sessionId manually or use a known format
-	// Let's try a direct POST with a fresh session
-
-	// First, establish SSE connection and get a real session
-	// For simplicity, let's use tools/list which might work without init
 	time.Sleep(100 * time.Millisecond)
 
 	// Try to post a message
@@ -61,7 +75,7 @@ func main() {
 			Name: "bbs_post",
 			Arguments: map[string]interface{}{
 				"topic_id": 8,
-				"content":  "SSE経由で投稿しました！🚀",
+				"content":  "SSE経由で投稿しました！",
 			},
 		},
 	}
@@ -69,14 +83,14 @@ func main() {
 	reqBody, _ := json.Marshal(postReq)
 	fmt.Printf("Request: %s\n", string(reqBody))
 
-	// Try posting to the message endpoint directly
-	postResp, err := http.Post("http://localhost:8080/message", "application/json", bytes.NewReader(reqBody))
+	postResp, err := a.HTTPClient.Post(a.BaseURL+"/message", "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		fmt.Printf("Failed to POST: %v\n", err)
-		return
+		return fmt.Errorf("failed to POST: %w", err)
 	}
 	defer postResp.Body.Close()
 
 	respBody, _ := io.ReadAll(postResp.Body)
 	fmt.Printf("Response: %s\n", string(respBody))
+
+	return nil
 }

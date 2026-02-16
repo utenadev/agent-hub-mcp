@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -14,68 +15,95 @@ import (
 	"github.com/yklcs/agent-hub-mcp/internal/mcp"
 )
 
+// App holds dependencies for testing
+type App struct {
+	Logger   *log.Logger
+	ExitFunc func(int)
+}
+
+// NewApp creates a new App with defaults
+func NewApp() *App {
+	return &App{
+		Logger:   log.New(os.Stderr, "", log.LstdFlags),
+		ExitFunc: os.Exit,
+	}
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: bbs <command> [args...]\nCommands: serve, orchestrator")
+	app := NewApp()
+	if err := app.Run(os.Args, os.Stdin, os.Stdout, os.Stderr); err != nil {
+		app.Logger.Printf("Error: %v\n", err)
+		app.ExitFunc(1)
+	}
+}
+
+// Run executes the application with given arguments and IO
+func (a *App) Run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	if len(args) < 2 {
+		return fmt.Errorf("Usage: bbs <command> [args...]\nCommands: serve, orchestrator")
 	}
 
-	command := os.Args[1]
+	command := args[1]
 
 	switch command {
 	case "serve":
-		runServe()
+		return a.runServe(args[2:])
 	case "orchestrator":
-		runOrchestrator()
+		return a.runOrchestrator(args[2:])
 	default:
-		log.Fatalf("Unknown command: %s\nCommands: serve, orchestrator", command)
+		return fmt.Errorf("Unknown command: %s\nCommands: serve, orchestrator", command)
 	}
 }
 
 // runServe starts the MCP server.
-func runServe() {
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+func (a *App) runServe(args []string) error {
+	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+	fs.SetOutput(io.Discard) // Suppress flag errors during testing
 	dbPath := fs.String("db", "agent-hub.db", "Path to SQLite database")
 	sseAddr := fs.String("sse", "", "Enable SSE mode on address (e.g., :8080)")
 
-	if err := fs.Parse(os.Args[2:]); err != nil {
-		log.Fatal(err)
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
 	database, err := db.Open(*dbPath)
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer database.Close()
 
-	log.Printf("Database opened: %s", *dbPath)
+	a.Logger.Printf("Database opened: %s", *dbPath)
 
 	srv := mcp.NewServer(database)
 
 	if *sseAddr != "" {
-		log.Printf("Starting MCP server on SSE %s...", *sseAddr)
+		a.Logger.Printf("Starting MCP server on SSE %s...", *sseAddr)
 		if err := srv.ServeSSE(*sseAddr); err != nil {
-			log.Fatalf("Server error: %v", err)
+			return fmt.Errorf("server error: %w", err)
 		}
 	} else {
-		log.Println("Starting MCP server on stdio...")
+		a.Logger.Println("Starting MCP server on stdio...")
 		if err := srv.Serve(); err != nil {
-			log.Fatalf("Server error: %v", err)
+			return fmt.Errorf("server error: %w", err)
 		}
 	}
+
+	return nil
 }
 
 // runOrchestrator starts the orchestrator monitor.
-func runOrchestrator() {
-	fs := flag.NewFlagSet("orchestrator", flag.ExitOnError)
+func (a *App) runOrchestrator(args []string) error {
+	fs := flag.NewFlagSet("orchestrator", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
 	dbPath := fs.String("db", "agent-hub.db", "Path to SQLite database")
 
-	if err := fs.Parse(os.Args[2:]); err != nil {
-		log.Fatal(err)
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
 	database, err := db.Open(*dbPath)
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer database.Close()
 
@@ -90,14 +118,15 @@ func runOrchestrator() {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigCh
-		log.Println("\nReceived interrupt signal, shutting down...")
+		a.Logger.Println("\nReceived interrupt signal, shutting down...")
 		cancel()
 	}()
 
 	orchestrator := hub.NewOrchestrator(database, hub.DefaultConfig())
 	if err := orchestrator.Start(ctx); err != nil && err != context.Canceled {
-		log.Fatalf("Orchestrator error: %v", err)
+		return fmt.Errorf("orchestrator error: %w", err)
 	}
 
-	log.Println("Orchestrator stopped")
+	a.Logger.Println("Orchestrator stopped")
+	return nil
 }
