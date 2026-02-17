@@ -16,6 +16,7 @@ type Model struct {
 	SelectedTopic      *db.Topic
 	Messages           []db.Message
 	Summaries          []db.TopicSummary
+	Presences          []db.AgentPresence
 	SelectedSummaryIdx int
 	FocusPane          FocusPane
 	Loading            bool
@@ -62,6 +63,12 @@ type SummariesLoadedMsg struct {
 	Error     error
 }
 
+// PresenceLoadedMsg is sent when agent presence is loaded.
+type PresenceLoadedMsg struct {
+	Presences []db.AgentPresence
+	Error     error
+}
+
 // SelectTopicMsg is sent to select a topic.
 type SelectTopicMsg int
 
@@ -87,7 +94,10 @@ func NewModel(database *db.DB) Model {
 
 // Init initializes the model.
 func (m Model) Init() tea.Cmd {
-	return m.loadTopicsCmd()
+	return tea.Batch(
+		m.loadTopicsCmd(),
+		m.tickCmd(),
+	)
 }
 
 // Update handles messages.
@@ -120,11 +130,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case SummariesLoadedMsg:
 		if msg.Error != nil {
-			// Don't show error for summaries, just log
 			return m, nil
 		}
 		m.Summaries = msg.Summaries
-		m.SelectedSummaryIdx = 0 // Reset to latest summary
+		m.SelectedSummaryIdx = 0
+		return m, nil
+
+	case PresenceLoadedMsg:
+		if msg.Error != nil {
+			return m, nil
+		}
+		m.Presences = msg.Presences
 		return m, nil
 
 	case TopicSelectedMsg:
@@ -137,8 +153,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.selectTopicCmd(int(msg))
 
 	case TickMsg:
-		// Refresh data periodically
-		return m, tea.Batch(m.loadTopicsCmd(), m.loadMessagesCmd())
+		return m, tea.Batch(
+			m.loadTopicsCmd(),
+			m.loadMessagesCmd(),
+			m.loadPresenceCmd(),
+			m.tickCmd(),
+		)
 
 	case MessagePostedMsg:
 		if msg.Error != nil {
@@ -345,5 +365,18 @@ func (m Model) postMessageCmd(content string) tea.Cmd {
 		}
 		_, err := m.db.PostMessage(int64(m.SelectedTopic.ID), sender, content)
 		return MessagePostedMsg{Error: err}
+	}
+}
+
+func (m Model) tickCmd() tea.Cmd {
+	return tea.Tick(10*time.Second, func(t time.Time) tea.Msg {
+		return TickMsg(t)
+	})
+}
+
+func (m Model) loadPresenceCmd() tea.Cmd {
+	return func() tea.Msg {
+		presences, err := m.db.ListAllAgentPresence()
+		return PresenceLoadedMsg{Presences: presences, Error: err}
 	}
 }

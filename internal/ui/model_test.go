@@ -3,8 +3,28 @@ package ui
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
+
+// executeAllCmds executes all commands in a batch and updates the model.
+func executeAllCmds(model Model, cmd tea.Cmd) Model {
+	if cmd == nil {
+		return model
+	}
+	msg := cmd()
+	if msg == nil {
+		return model
+	}
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, c := range batch {
+			model = executeAllCmds(model, c)
+		}
+		return model
+	}
+	newModel, _ := model.Update(msg)
+	return newModel.(Model)
+}
 
 func TestModel(t *testing.T) {
 	// Use in-memory database for testing
@@ -28,7 +48,6 @@ func TestModel(t *testing.T) {
 	})
 
 	t.Run("Init command loads topics", func(t *testing.T) {
-		// Create some topics
 		_, err := database.CreateTopic("Topic 1")
 		if err != nil {
 			t.Fatalf("failed to create topic: %v", err)
@@ -38,16 +57,8 @@ func TestModel(t *testing.T) {
 			t.Fatalf("failed to create topic: %v", err)
 		}
 
-		// Init should load topics
 		cmd := model.Init()
-		if cmd != nil {
-			// Wait for the command to complete
-			msg := cmd()
-			if msg != nil {
-				newModel, _ := model.Update(msg)
-				model = newModel.(Model)
-			}
-		}
+		model = executeAllCmds(model, cmd)
 
 		if len(model.Topics) != 2 {
 			t.Errorf("expected 2 topics, got %d", len(model.Topics))
@@ -55,7 +66,6 @@ func TestModel(t *testing.T) {
 	})
 
 	t.Run("SelectTopic selects a topic and loads messages", func(t *testing.T) {
-		// Create a topic with messages
 		topicID, err := database.CreateTopic("Test Topic")
 		if err != nil {
 			t.Fatalf("failed to create topic: %v", err)
@@ -65,17 +75,9 @@ func TestModel(t *testing.T) {
 			t.Fatalf("failed to post message: %v", err)
 		}
 
-		// Reload topics to get the new one
 		cmd := model.Init()
-		if cmd != nil {
-			msg := cmd()
-			if msg != nil {
-				newModel, _ := model.Update(msg)
-				model = newModel.(Model)
-			}
-		}
+		model = executeAllCmds(model, cmd)
 
-		// Find the topic in the list
 		var foundTopic *db.Topic
 		for i, t := range model.Topics {
 			if t.ID == int(topicID) {
@@ -87,19 +89,10 @@ func TestModel(t *testing.T) {
 			t.Fatal("topic not found in list")
 		}
 
-		// Select the topic using the topic ID
 		msg := SelectTopicMsg(foundTopic.ID)
 		newModel, cmd := model.Update(msg)
 		model = newModel.(Model)
-
-		// Execute the command to load messages
-		if cmd != nil {
-			resultMsg := cmd()
-			if resultMsg != nil {
-				newModel, _ = model.Update(resultMsg)
-				model = newModel.(Model)
-			}
-		}
+		model = executeAllCmds(model, cmd)
 
 		if model.SelectedTopic == nil {
 			t.Error("expected SelectedTopic to be set")

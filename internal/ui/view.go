@@ -7,7 +7,6 @@ import (
 )
 
 var (
-	// Styles
 	titleStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("211")).Bold(true)
 	selectedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Background(lipgloss.Color("235"))
 	dimStyle       = lipgloss.NewStyle().Faint(true)
@@ -16,17 +15,17 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("238")).
 			Padding(1)
-	messageStyle = lipgloss.NewStyle().Padding(0, 1)
-	senderStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true)
-	helpStyle    = lipgloss.NewStyle().Faint(true).Margin(1, 0)
-	summaryStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("238")).
-			Padding(1)
+	messageStyle       = lipgloss.NewStyle().Padding(0, 1)
+	senderStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true)
+	helpStyle          = lipgloss.NewStyle().Faint(true).Margin(1, 0)
+	summaryStyle       = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("238")).Padding(1)
 	summaryHeaderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("228")).Bold(true)
 	summaryBadgeReal   = lipgloss.NewStyle().Foreground(lipgloss.Color("76")).Background(lipgloss.Color("235")).Padding(0, 1)
 	summaryBadgeMock   = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Background(lipgloss.Color("235")).Padding(0, 1)
 	focusedBorderStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("226"))
+	onlineStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("76"))
+	offlineStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	presenceHeader     = lipgloss.NewStyle().Foreground(lipgloss.Color("117")).Bold(true)
 )
 
 // View renders the model.
@@ -97,6 +96,22 @@ func (m Model) renderTopicsPane() string {
 			topicList.WriteString("\n")
 		}
 	}
+
+	if len(m.Presences) > 0 {
+		topicList.WriteString("\n\n")
+		topicList.WriteString(presenceHeader.Render("Agents\n\n"))
+		for _, p := range m.Presences {
+			var statusIndicator string
+			if p.Status == "online" {
+				statusIndicator = onlineStyle.Render("● ")
+			} else {
+				statusIndicator = offlineStyle.Render("○ ")
+			}
+			topicList.WriteString(statusIndicator + p.Name + "\n")
+			topicList.WriteString(dimStyle.Render("  "+p.Role) + "\n")
+		}
+	}
+
 	return topicList.String()
 }
 
