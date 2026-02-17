@@ -62,6 +62,7 @@ func (a *App) runServe(args []string) error {
 	dbPath := fs.String("db", "agent-hub.db", "Path to SQLite database")
 	sseAddr := fs.String("sse", "", "Enable SSE mode on address (e.g., :8080)")
 	senderFlag := fs.String("sender", "", "Default sender name for messages (overrides BBS_AGENT_ID env var)")
+	roleFlag := fs.String("role", "", "Agent role (overrides BBS_AGENT_ROLE env var)")
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
@@ -76,16 +77,30 @@ func (a *App) runServe(args []string) error {
 		}
 	}
 
+	// Determine role: flag > env var > default ("agent")
+	role := *roleFlag
+	if role == "" {
+		role = os.Getenv("BBS_AGENT_ROLE")
+		if role == "" {
+			role = "agent"
+		}
+	}
+
 	database, err := db.Open(*dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer database.Close()
 
-	a.Logger.Printf("Database opened: %s", *dbPath)
-	a.Logger.Printf("Default sender: %s", sender)
+	// Register/update agent presence
+	if err := database.UpsertAgentPresence(sender, role); err != nil {
+		a.Logger.Printf("Warning: failed to register agent presence: %v", err)
+	}
 
-	srv := mcp.NewServer(database, sender)
+	a.Logger.Printf("Database opened: %s", *dbPath)
+	a.Logger.Printf("Agent: name=%s, role=%s", sender, role)
+
+	srv := mcp.NewServer(database, sender, role)
 
 	if *sseAddr != "" {
 		a.Logger.Printf("Starting MCP server on SSE %s...", *sseAddr)

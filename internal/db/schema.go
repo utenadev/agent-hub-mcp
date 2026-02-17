@@ -15,4 +15,13 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(topic_id) REFERENCES topics(id)
 );
+
+CREATE TABLE IF NOT EXISTS agent_presence (
+    name TEXT PRIMARY KEY,
+    role TEXT,
+    status TEXT,
+    topic_id INTEGER,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_check DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `

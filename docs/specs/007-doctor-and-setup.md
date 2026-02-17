@@ -42,8 +42,19 @@
 - **`internal/db/db.go`**:
     - DBの整合性をチェックするための `CheckIntegrity()` メソッドを追加。
 
-## 5. 実装ステップ
+## 5. ドキュメントの更新
+
+以下のドキュメントの「CLI Commands」セクションに、新コマンドの説明を追記する。
+
+- **`README.md` (日本語):**
+  - `agent-hub doctor`: システムの整合性チェック（DB、環境変数、設定ファイル）。
+  - `agent-hub setup`: 初期セットアップの自動実行（DB初期化、Claude Desktop設定補助）。
+- **`README.en.md` (英語):**
+  - `agent-hub doctor`: System integrity check (DB, Env vars, Config files).
+  - `agent-hub setup`: Automated initial setup (DB initialization, Claude Desktop config helper).
+
+## 6. 実装ステップ
 1. `doctor` コマンドの実装（現状の確認）。
 2. `setup` コマンドの実装（初期設定の自動化）。
 3. `serve` 起動時のセルフチェックの強化。
-4. ドキュメント（README.md）へのコマンド説明の追加。
+4. `README.md` および `README.en.md` へのコマンド説明の追加。

@@ -14,10 +14,11 @@ type Server struct {
 	mcpServer     *server.MCPServer
 	db            *db.DB
 	DefaultSender string
+	DefaultRole   string
 }
 
-// NewServer creates a new MCP server with the given database and default sender.
-func NewServer(database *db.DB, defaultSender string) *Server {
+// NewServer creates a new MCP server with the given database, default sender, and role.
+func NewServer(database *db.DB, defaultSender, defaultRole string) *Server {
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		"agent-hub-mcp",
@@ -29,6 +30,7 @@ func NewServer(database *db.DB, defaultSender string) *Server {
 		mcpServer:     mcpServer,
 		db:            database,
 		DefaultSender: defaultSender,
+		DefaultRole:   defaultRole,
 	}
 
 	// Register tools
@@ -81,6 +83,29 @@ func (s *Server) registerTools() {
 	)
 
 	s.mcpServer.AddTool(readTool, s.handleBBSRead)
+
+	// check_hub_status tool
+	checkHubStatusTool := mcp.NewTool(
+		"check_hub_status",
+		mcp.WithDescription("Check hub status for unread messages and team presence"),
+	)
+
+	s.mcpServer.AddTool(checkHubStatusTool, s.handleCheckHubStatus)
+
+	// update_status tool
+	updateStatusTool := mcp.NewTool(
+		"update_status",
+		mcp.WithDescription("Update your current status and working topic"),
+		mcp.WithString("status",
+			mcp.Required(),
+			mcp.Description("Your current status (e.g., 'implementing', 'testing', 'waiting')"),
+		),
+		mcp.WithNumber("topic_id",
+			mcp.Description("Current topic ID you are working on (optional)"),
+		),
+	)
+
+	s.mcpServer.AddTool(updateStatusTool, s.handleUpdateStatus)
 }
 
 // Serve starts the MCP server on stdio.
