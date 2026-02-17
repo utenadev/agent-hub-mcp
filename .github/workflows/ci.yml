@@ -62,6 +62,9 @@ jobs:
           - os: linux
             arch: '386'
             suffix: ''
+          - os: linux
+            arch: arm64
+            suffix: ''
           - os: darwin
             arch: arm64
             suffix: ''
@@ -139,37 +142,41 @@ jobs:
         VERSION=${GITHUB_REF_NAME#v}
         mkdir -p dist
         
-        # Process each platform
-        for platform in windows linux darwin; do
-          if [ "$platform" = "windows" ]; then
-            suffix=".exe"
-            ext=".zip"
-          else
-            suffix=""
-            ext=".tar.gz"
-          fi
+        # Process each platform/arch combination
+        declare -A platforms
+        platforms[windows_amd64]="windows:amd64:.exe:.zip"
+        platforms[linux_386]="linux:386::.tar.gz"
+        platforms[linux_arm64]="linux:arm64::.tar.gz"
+        platforms[darwin_arm64]="darwin:arm64::.tar.gz"
+        
+        for key in "${!platforms[@]}"; do
+          IFS=':' read -r platform arch suffix ext <<< "${platforms[$key]}"
           
-          # Find all files for this platform
-          mkdir -p "tmp-${platform}"
+          # Find artifact for this platform/arch
+          artifact_dir="artifacts/binaries-${platform}-${arch}"
           
-          # Copy binaries
-          for bin in agent-hub dashboard client; do
-            if [ -f "artifacts/${bin}${suffix}" ]; then
-              cp "artifacts/${bin}${suffix}" "tmp-${platform}/"
+          if [ -d "$artifact_dir" ]; then
+            mkdir -p "tmp-${key}"
+            
+            # Copy binaries
+            for bin in agent-hub dashboard client; do
+              if [ -f "${artifact_dir}/${bin}${suffix}" ]; then
+                cp "${artifact_dir}/${bin}${suffix}" "tmp-${key}/"
+              fi
+            done
+            
+            # Copy documentation
+            cp README.md LICENSE "tmp-${key}/" 2>/dev/null || true
+            
+            # Create archive
+            if [ "$platform" = "windows" ]; then
+              (cd "tmp-${key}" && zip -r "../dist/agent-hub-mcp_${VERSION}_${platform}_${arch}.zip" .)
+            else
+              tar -czf "dist/agent-hub-mcp_${VERSION}_${platform}_${arch}${ext}" -C "tmp-${key}" .
             fi
-          done
-          
-          # Copy documentation
-          cp README.md LICENSE "tmp-${platform}/" 2>/dev/null || true
-          
-          # Create archive
-          if [ "$platform" = "windows" ]; then
-            (cd "tmp-${platform}" && zip -r "../dist/agent-hub-mcp_${VERSION}_${platform}_amd64.zip" .)
-          else
-            tar -czf "dist/agent-hub-mcp_${VERSION}_${platform}_amd64${ext}" -C "tmp-${platform}" .
+            
+            rm -rf "tmp-${key}"
           fi
-          
-          rm -rf "tmp-${platform}"
         done
         
         echo "Created archives:"

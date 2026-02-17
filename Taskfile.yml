@@ -1,0 +1,102 @@
+version: '3'
+
+vars:
+  PROJECT_NAME: agent-hub-mcp
+  BINARIES:
+    sh: echo "agent-hub dashboard client"
+
+tasks:
+  default:
+    cmds:
+      - task: build
+    desc: Build all binaries
+
+  build:
+    desc: Build all binaries (agent-hub, dashboard, client)
+    cmds:
+      - go build -o bin/agent-hub ./cmd/agent-hub
+      - go build -o bin/dashboard ./cmd/dashboard
+      - go build -o bin/client ./cmd/client
+
+  build:agent-hub:
+    desc: Build agent-hub binary only
+    cmds:
+      - go build -o bin/agent-hub ./cmd/agent-hub
+
+  build:dashboard:
+    desc: Build dashboard binary only
+    cmds:
+      - go build -o bin/dashboard ./cmd/dashboard
+
+  build:client:
+    desc: Build client binary only
+    cmds:
+      - go build -o bin/client ./cmd/client
+
+  run:
+    desc: Run agent-hub server
+    cmds:
+      - ./bin/agent-hub serve
+    env:
+      BBS_AGENT_ID: '{{.BBS_AGENT_ID | default "dev-agent"}}'
+
+  run:orchestrator:
+    desc: Run agent-hub orchestrator
+    cmds:
+      - ./bin/agent-hub orchestrator
+
+  run:dashboard:
+    desc: Run TUI dashboard
+    cmds:
+      - ./bin/dashboard
+
+  test:
+    desc: Run all Go tests
+    cmds:
+      - go test -v ./...
+
+  test:race:
+    desc: Run tests with race detector
+    cmds:
+      - go test -v -race ./...
+
+  test:cover:
+    desc: Run tests with coverage report
+    cmds:
+      - go test -v -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+      - echo "Coverage report generated: coverage.html"
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - go fmt ./...
+
+  lint:
+    desc: Run Go linters
+    cmds:
+      - go vet ./...
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+      - rm -f coverage.out coverage.html
+
+  install:tools:
+    desc: Install Go development tools
+    cmds:
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+  ci:lint:
+    desc: Run full linting (for CI)
+    cmds:
+      - task: fmt
+      - task: lint
+      - golangci-lint run
+
+  ci:test:
+    desc: Run full test suite (for CI)
+    cmds:
+      - task: test:race
+      - task: test:cover

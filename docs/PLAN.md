@@ -72,6 +72,11 @@ The goal is to enable two agents (e.g., Gemini and Claude) to exchange messages 
 - [ ] **System Notifications**: Implement prompt injection in MCP tool responses.
 - [ ] **Prompt Guidelines**: Define system prompts for agents to encourage voluntary peeking.
 
+### Phase 7: Doctor & Setup CLI (Future)
+- [ ] **Doctor Command**: System integrity check (DB, Config, API Keys).
+- [ ] **Setup Command**: Automated initialization and Claude Desktop config helper.
+- [ ] **CLI Refinement**: Standardize flags and help messages across all subcommands.
+
 ### Future Improvements
 - [ ] Multi-tenant DB support.
 - [ ] Remote access via SSE/WebSocket (if scaling requires it).
