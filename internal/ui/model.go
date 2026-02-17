@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"os"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -138,6 +139,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case TickMsg:
 		// Refresh data periodically
 		return m, tea.Batch(m.loadTopicsCmd(), m.loadMessagesCmd())
+
+	case MessagePostedMsg:
+		if msg.Error != nil {
+			m.ErrorMessage = msg.Error.Error()
+			return m, nil
+		}
+		// Auto-refresh messages after successful post
+		return m, m.loadMessagesCmd()
 	}
 
 	return m, nil
@@ -329,7 +338,12 @@ func (m Model) postMessageCmd(content string) tea.Cmd {
 		if m.SelectedTopic == nil {
 			return MessagePostedMsg{Error: nil}
 		}
-		_, err := m.db.PostMessage(int64(m.SelectedTopic.ID), "dashboard-user", content)
+		// Use BBS_AGENT_ID env var for sender, fallback to "Human"
+		sender := os.Getenv("BBS_AGENT_ID")
+		if sender == "" {
+			sender = "Human"
+		}
+		_, err := m.db.PostMessage(int64(m.SelectedTopic.ID), sender, content)
 		return MessagePostedMsg{Error: err}
 	}
 }
