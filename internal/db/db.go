@@ -388,38 +388,16 @@ func (db *DB) ListAllAgentPresence() ([]AgentPresence, error) {
 
 // CountUnreadMessages counts messages since the agent's last check.
 func (db *DB) CountUnreadMessages(agentName string) (int64, error) {
-	// Get agent's last check time
-	row := db.QueryRow(
-		"SELECT last_check FROM agent_presence WHERE name = ?",
-		agentName,
-	)
-
-	var lastCheck sql.NullString
-	err := row.Scan(&lastCheck)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// Agent not registered, return all message count
-			var count int64
-			err = db.QueryRow("SELECT COUNT(*) FROM messages").Scan(&count)
-			if err != nil {
-				return 0, fmt.Errorf("failed to count messages: %w", err)
-			}
-			return count, nil
-		}
-		return 0, fmt.Errorf("failed to get last check time: %w", err)
-	}
-
 	var count int64
-	if lastCheck.Valid {
-		// Count messages since last check
-		err = db.QueryRow(
-			"SELECT COUNT(*) FROM messages WHERE created_at > ?",
-			lastCheck.String,
-		).Scan(&count)
-	} else {
-		// No last check, count all messages
-		err = db.QueryRow("SELECT COUNT(*) FROM messages").Scan(&count)
-	}
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM messages 
+		 WHERE created_at > (
+			 SELECT COALESCE(last_check, '1970-01-01 00:00:00') 
+			 FROM agent_presence 
+			 WHERE name = ?
+		 )`,
+		agentName,
+	).Scan(&count)
 
 	if err != nil {
 		return 0, fmt.Errorf("failed to count unread messages: %w", err)

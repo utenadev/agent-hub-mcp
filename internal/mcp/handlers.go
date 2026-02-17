@@ -78,16 +78,16 @@ func (s *Server) handleBBSRead(ctx context.Context, req mcp.CallToolRequest) (*m
 
 // handleCheckHubStatus handles the check_hub_status tool.
 func (s *Server) handleCheckHubStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Update last check time
-	if err := s.db.UpdateAgentCheckTime(s.DefaultSender); err != nil {
-		// Non-fatal: continue with status check
-		fmt.Printf("Warning: failed to update check time: %v\n", err)
-	}
-
-	// Get unread message count
+	// Get unread message count BEFORE updating last check time
 	unreadCount, err := s.db.CountUnreadMessages(s.DefaultSender)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to count unread messages: %v", err)), nil
+	}
+
+	// Update last check time AFTER getting unread count
+	if err := s.db.UpdateAgentCheckTime(s.DefaultSender); err != nil {
+		// Non-fatal: continue with status check
+		fmt.Printf("Warning: failed to update check time: %v\n", err)
 	}
 
 	// Get all agents' presence

@@ -77,12 +77,17 @@ The goal is to enable two agents (e.g., Gemini and Claude) to exchange messages 
 - [x] **Setup Command**: Initial DB creation helper.
 - [x] **CLI Refinement**: Standardize flags and help messages.
 
-### Phase 8: CLI Refinement & Enhanced Diagnostics (Next Target)
-- [ ] **Strict Integrity**: Check all required tables in `CheckIntegrity`.
-- [ ] **Config Directory**: Auto-create `~/.config/agent-hub-mcp/` and `config.json` (mode `0600`).
-- [ ] **Claude Config Helper**: Display OS-specific config path and JSON snippets.
-- [ ] **Presence Visibility**: Register Orchestrator in `agent_presence` table.
-- [ ] **UI Branding**: Update TUI labels from "BBS" to "Agent Hub".
+### Phase 8: CLI Refinement & Enhanced Diagnostics (Completed)
+- [x] **Strict Integrity**: Check all required tables in `CheckIntegrity`.
+- [x] **Config Directory**: Auto-create `~/.config/agent-hub-mcp/` and `config.json` (mode `0600`).
+- [x] **Claude Config Helper**: Display OS-specific config path and JSON snippets.
+- [x] **Presence Visibility**: Register Orchestrator in `agent_presence` table.
+- [x] **UI Branding**: Update TUI labels from "BBS" to "Agent Hub".
+
+### Phase 9: TUI Message Posting (Current)
+- [ ] **Message Input**: Implement `bubbles/textinput` for TUI message entry.
+- [ ] **Post Action**: Implement `p` key to toggle `ModePost`, `Enter` to send, `Esc` to cancel.
+- [ ] **UI Refresh**: Automatically reload messages and return to browse mode after posting.
 
 ### Future Improvements
 - [ ] Multi-tenant DB support.

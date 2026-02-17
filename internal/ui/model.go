@@ -3,6 +3,7 @@ package ui
 import (
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
@@ -19,6 +20,7 @@ type Model struct {
 	Loading            bool
 	ErrorMessage       string
 	InputMode          InputMode
+	TextInput          textinput.Model
 }
 
 // InputMode represents the current input mode.
@@ -64,6 +66,11 @@ type SelectTopicMsg int
 
 // NewModel creates a new Agent Hub dashboard model.
 func NewModel(database *db.DB) Model {
+	ti := textinput.New()
+	ti.Placeholder = "Type your message..."
+	ti.CharLimit = 1000
+	ti.Width = 48
+
 	return Model{
 		db:                 database,
 		Topics:             []db.Topic{},
@@ -73,6 +80,7 @@ func NewModel(database *db.DB) Model {
 		FocusPane:          PaneTopics,
 		Loading:            true,
 		InputMode:          ModeBrowse,
+		TextInput:          ti,
 	}
 }
 
@@ -136,6 +144,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle input mode first - text input takes priority
+	if m.InputMode == ModePost {
+		switch msg.String() {
+		case "esc":
+			// Exit post mode
+			m.InputMode = ModeBrowse
+			m.TextInput.Reset()
+			m.TextInput.Blur()
+			return m, nil
+		case "enter":
+			// Submit message
+			if m.TextInput.Value() != "" && m.SelectedTopic != nil {
+				content := m.TextInput.Value()
+				m.TextInput.Reset()
+				m.InputMode = ModeBrowse
+				m.TextInput.Blur()
+				return m, m.postMessageCmd(content)
+			}
+			return m, nil
+		default:
+			// Pass other keys to text input
+			var cmd tea.Cmd
+			m.TextInput, cmd = m.TextInput.Update(msg)
+			return m, cmd
+		}
+	}
+
+	// Browse mode key handling
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
@@ -168,11 +204,15 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "p":
 		// Enter post mode
-		m.InputMode = ModePost
+		if m.SelectedTopic != nil {
+			m.InputMode = ModePost
+			m.TextInput.Focus()
+			return m, textinput.Blink
+		}
 		return m, nil
 
 	case "tab":
-		// Cycle focus between panes
+		// Cycle focus forward between panes
 		switch m.FocusPane {
 		case PaneTopics:
 			m.FocusPane = PaneMessages
@@ -180,6 +220,18 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.FocusPane = PaneSummaries
 		case PaneSummaries:
 			m.FocusPane = PaneTopics
+		}
+		return m, nil
+
+	case "shift+tab":
+		// Cycle focus backward between panes
+		switch m.FocusPane {
+		case PaneTopics:
+			m.FocusPane = PaneSummaries
+		case PaneMessages:
+			m.FocusPane = PaneTopics
+		case PaneSummaries:
+			m.FocusPane = PaneMessages
 		}
 		return m, nil
 
@@ -265,4 +317,19 @@ func (m Model) selectTopicCmd(topicID int) tea.Cmd {
 type TopicSelectedMsg struct {
 	Topic    *db.Topic
 	Messages []db.Message
+}
+
+// MessagePostedMsg is sent when a message is posted.
+type MessagePostedMsg struct {
+	Error error
+}
+
+func (m Model) postMessageCmd(content string) tea.Cmd {
+	return func() tea.Msg {
+		if m.SelectedTopic == nil {
+			return MessagePostedMsg{Error: nil}
+		}
+		_, err := m.db.PostMessage(int64(m.SelectedTopic.ID), "dashboard-user", content)
+		return MessagePostedMsg{Error: err}
+	}
 }
