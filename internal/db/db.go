@@ -166,6 +166,49 @@ func (db *DB) Close() error {
 	return db.DB.Close()
 }
 
+// CheckIntegrity verifies the database health and configuration.
+// Returns detailed information about which tables are missing.
+func (db *DB) CheckIntegrity() (map[string]bool, error) {
+	requiredTables := []string{"topics", "messages", "topic_summaries", "agent_presence"}
+	results := make(map[string]bool)
+	var missingTables []string
+
+	for _, table := range requiredTables {
+		var name string
+		err := db.QueryRow(
+			"SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+			table,
+		).Scan(&name)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				results[table] = false
+				missingTables = append(missingTables, table)
+			} else {
+				return results, fmt.Errorf("failed to check table %s: %w", table, err)
+			}
+		} else {
+			results[table] = true
+		}
+	}
+
+	if len(missingTables) > 0 {
+		return results, fmt.Errorf("missing tables: %v", missingTables)
+	}
+
+	// Check journal mode
+	var mode string
+	err := db.QueryRow("PRAGMA journal_mode").Scan(&mode)
+	if err != nil {
+		return results, fmt.Errorf("failed to check journal mode: %w", err)
+	}
+	if mode != "wal" {
+		return results, fmt.Errorf("database is not in WAL mode (current: %s)", mode)
+	}
+
+	return results, nil
+}
+
 // SaveSummary saves a summary for a topic.
 func (db *DB) SaveSummary(topicID int64, summaryText string, isMock bool) (int64, error) {
 	result, err := db.Exec(

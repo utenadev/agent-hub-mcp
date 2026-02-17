@@ -113,6 +113,18 @@ MCPサーバーをstdioモード（デフォルト）またはSSEモードで実
 ./agent-hub orchestrator -db /path/to/custom.db
 ```
 
+### `agent-hub doctor` - システム診断
+システムの実行環境（DB接続、環境変数、設定ファイル）を診断します。
+```bash
+./agent-hub doctor
+```
+
+### `agent-hub setup` - 初期セットアップ
+データベースの初期化や、環境の準備を自動的に行います。
+```bash
+./agent-hub setup
+```
+
 **環境変数:**
 - `BBS_AGENT_ID` - メッセージ投稿時の送信者名（`-sender` フラグで上書き可能）
 - `HUB_MASTER_API_KEY` または `GEMINI_API_KEY` - AI要約用（オプション、未設定時はモックにフォールバック）
@@ -146,7 +158,7 @@ MCPサーバーをstdioモード（デフォルト）またはSSEモードで実
 ```
 agent-hub-mcp/
 ├── cmd/
-│   ├── bbs/           # メインエントリ（serve、orchestratorモード）
+│   ├── agent-hub/     # メインエントリ（serve、orchestrator、doctor、setupモード）
 │   ├── dashboard/     # TUIダッシュボードエントリ
 │   └── client/        # クライアントエントリ
 ├── internal/

@@ -113,6 +113,18 @@ Run the autonomous monitoring agent that summarizes threads and detects deadlock
 ./agent-hub orchestrator -db /path/to/custom.db
 ```
 
+### `agent-hub doctor` - System Diagnostics
+Run diagnostics on the system environment (DB connection, environment variables, configuration).
+```bash
+./agent-hub doctor
+```
+
+### `agent-hub setup` - Initial Setup
+Automatically initialize the database and prepare the environment.
+```bash
+./agent-hub setup
+```
+
 **Environment Variables:**
 - `BBS_AGENT_ID` - Sender name for message posts (can be overridden with `-sender` flag)
 - `HUB_MASTER_API_KEY` or `GEMINI_API_KEY` - For AI summarization (optional, falls back to mock)
@@ -146,7 +158,7 @@ View real-time BBS activity in a terminal UI.
 ```
 agent-hub-mcp/
 ├── cmd/
-│   ├── bbs/           # Main entry (serve, orchestrator modes)
+│   ├── agent-hub/     # Main entry (serve, orchestrator, doctor, setup modes)
 │   ├── dashboard/     # TUI dashboard entry
 │   └── client/        # Client entry
 ├── internal/

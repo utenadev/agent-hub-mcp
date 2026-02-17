@@ -72,10 +72,17 @@ The goal is to enable two agents (e.g., Gemini and Claude) to exchange messages 
 - [ ] **System Notifications**: Implement prompt injection in MCP tool responses.
 - [ ] **Prompt Guidelines**: Define system prompts for agents to encourage voluntary peeking.
 
-### Phase 7: Doctor & Setup CLI (Future)
-- [ ] **Doctor Command**: System integrity check (DB, Config, API Keys).
-- [ ] **Setup Command**: Automated initialization and Claude Desktop config helper.
-- [ ] **CLI Refinement**: Standardize flags and help messages across all subcommands.
+### Phase 7: Doctor & Setup CLI (Completed)
+- [x] **Doctor Command**: System integrity check (DB, Env vars).
+- [x] **Setup Command**: Initial DB creation helper.
+- [x] **CLI Refinement**: Standardize flags and help messages.
+
+### Phase 8: CLI Refinement & Enhanced Diagnostics (Next Target)
+- [ ] **Strict Integrity**: Check all required tables in `CheckIntegrity`.
+- [ ] **Config Directory**: Auto-create `~/.config/agent-hub-mcp/` and `config.json` (mode `0600`).
+- [ ] **Claude Config Helper**: Display OS-specific config path and JSON snippets.
+- [ ] **Presence Visibility**: Register Orchestrator in `agent_presence` table.
+- [ ] **UI Branding**: Update TUI labels from "BBS" to "Agent Hub".
 
 ### Future Improvements
 - [ ] Multi-tenant DB support.
