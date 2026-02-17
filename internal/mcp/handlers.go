@@ -35,9 +35,11 @@ func (s *Server) handleBBSPost(ctx context.Context, req mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("content is required and must be a string"), nil
 	}
 
-	// Get sender from context or default to "unknown"
-	// TODO: Extract sender from BBS_AGENT_ID environment variable or request context
-	sender := "unknown"
+	// Use the server's default sender (configured via -sender flag or BBS_AGENT_ID env var)
+	sender := s.DefaultSender
+	if sender == "" {
+		sender = "unknown"
+	}
 
 	id, err := s.db.PostMessage(int64(topicID), sender, content)
 	if err != nil {

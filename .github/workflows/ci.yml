@@ -78,13 +78,13 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
-    - name: Build bbs binary
+    - name: Build agent-hub binary
       env:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
       run: |
-        output="bin/bbs-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.suffix }}"
-        go build -ldflags="-s -w" -o "${output}" ./cmd/bbs
+        output="bin/agent-hub${{ matrix.suffix }}"
+        go build -ldflags="-s -w" -o "${output}" ./cmd/agent-hub
         echo "Built: ${output}"
 
     - name: Build dashboard binary
@@ -92,7 +92,7 @@ jobs:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
       run: |
-        output="bin/dashboard-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.suffix }}"
+        output="bin/dashboard${{ matrix.suffix }}"
         go build -ldflags="-s -w" -o "${output}" ./cmd/dashboard
         echo "Built: ${output}"
 
@@ -101,7 +101,7 @@ jobs:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
       run: |
-        output="bin/client-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.suffix }}"
+        output="bin/client${{ matrix.suffix }}"
         go build -ldflags="-s -w" -o "${output}" ./cmd/client
         echo "Built: ${output}"
 
@@ -134,10 +134,51 @@ jobs:
         echo "---"
         find artifacts -type f
 
+    - name: Create platform-specific ZIP packages
+      run: |
+        VERSION=${GITHUB_REF_NAME#v}
+        mkdir -p dist
+        
+        # Process each platform
+        for platform in windows linux darwin; do
+          if [ "$platform" = "windows" ]; then
+            suffix=".exe"
+            ext=".zip"
+          else
+            suffix=""
+            ext=".tar.gz"
+          fi
+          
+          # Find all files for this platform
+          mkdir -p "tmp-${platform}"
+          
+          # Copy binaries
+          for bin in agent-hub dashboard client; do
+            if [ -f "artifacts/${bin}${suffix}" ]; then
+              cp "artifacts/${bin}${suffix}" "tmp-${platform}/"
+            fi
+          done
+          
+          # Copy documentation
+          cp README.md LICENSE "tmp-${platform}/" 2>/dev/null || true
+          
+          # Create archive
+          if [ "$platform" = "windows" ]; then
+            (cd "tmp-${platform}" && zip -r "../dist/agent-hub-mcp_${VERSION}_${platform}_amd64.zip" .)
+          else
+            tar -czf "dist/agent-hub-mcp_${VERSION}_${platform}_amd64${ext}" -C "tmp-${platform}" .
+          fi
+          
+          rm -rf "tmp-${platform}"
+        done
+        
+        echo "Created archives:"
+        ls -la dist/
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        files: artifacts/*
+        files: dist/*
         generate_release_notes: true
         fail_on_unmatched_files: false
       env:

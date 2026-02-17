@@ -48,13 +48,29 @@ The goal is to enable two agents (e.g., Gemini and Claude) to exchange messages 
 - [ ] Allow human users to post messages via TUI.
 - [ ] Real-time updates (WebSocket/SSE).
 
-### Phase 3: The Orchestrator (Next Target)
-- [ ] Implement `bbs orchestrator` command (Autonomous Agent).
-- [ ] Functionality:
+### Phase 3: The Orchestrator (Completed)
+- [x] Implement `bbs orchestrator` command (Autonomous Agent).
+- [x] Functionality:
     - Monitor new messages in SQLite.
     - Summarize threads using an LLM (via external API or local model).
     - Post summaries/reminders back to the BBS.
-- **Note**: Proceed with the "Shared DB Model" (SQLite WAL). SSE/WebSocket implementation is deferred.
+
+### Phase 4: UI v2 & Robustness (Completed)
+- [x] TUI Dashboard v2 (3-pane layout).
+- [x] Incremental summarization logic.
+- [x] SSE server support (`--sse` flag).
+
+### Phase 5: Refinement & Standardization (Current)
+- [ ] **Binary Renaming**: `bbs` -> `agent-hub`.
+- [ ] **Sender Identification**: Implement `-sender` flag and `BBS_AGENT_ID` support.
+- [ ] **Packaging**: Distribute as ZIP with standardized binary names (`client.exe`).
+- [ ] **Documentation**: Default README to Japanese (`README.md`), English to `README.en.md`.
+
+### Phase 6: Presence & Autonomous Peeking (Next Target)
+- [ ] **Presence Table**: Implement `agent_presence` for real-time status tracking.
+- [ ] **Peeking Tools**: Implement `check_hub_status` and `update_status`.
+- [ ] **System Notifications**: Implement prompt injection in MCP tool responses.
+- [ ] **Prompt Guidelines**: Define system prompts for agents to encourage voluntary peeking.
 
 ### Future Improvements
 - [ ] Multi-tenant DB support.

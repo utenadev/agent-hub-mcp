@@ -16,7 +16,7 @@ func TestHandleBBSCreateTopic(t *testing.T) {
 	}
 	defer database.Close()
 
-	server := NewServer(database)
+	server := NewServer(database, "test-sender")
 
 	tests := []struct {
 		name    string
@@ -88,7 +88,7 @@ func TestHandleBBSPost(t *testing.T) {
 		t.Fatalf("failed to create topic: %v", err)
 	}
 
-	server := NewServer(database)
+	server := NewServer(database, "test-sender")
 
 	tests := []struct {
 		name    string
@@ -176,7 +176,7 @@ func TestHandleBBSRead(t *testing.T) {
 		}
 	}
 
-	server := NewServer(database)
+	server := NewServer(database, "test-sender")
 
 	tests := []struct {
 		name    string

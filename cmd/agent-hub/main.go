@@ -40,7 +40,7 @@ func main() {
 // Run executes the application with given arguments and IO
 func (a *App) Run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	if len(args) < 2 {
-		return fmt.Errorf("Usage: bbs <command> [args...]\nCommands: serve, orchestrator")
+		return fmt.Errorf("Usage: agent-hub <command> [args...]\nCommands: serve, orchestrator")
 	}
 
 	command := args[1]
@@ -61,9 +61,19 @@ func (a *App) runServe(args []string) error {
 	fs.SetOutput(io.Discard) // Suppress flag errors during testing
 	dbPath := fs.String("db", "agent-hub.db", "Path to SQLite database")
 	sseAddr := fs.String("sse", "", "Enable SSE mode on address (e.g., :8080)")
+	senderFlag := fs.String("sender", "", "Default sender name for messages (overrides BBS_AGENT_ID env var)")
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
+	// Determine sender: flag > env var > default ("unknown")
+	sender := *senderFlag
+	if sender == "" {
+		sender = os.Getenv("BBS_AGENT_ID")
+		if sender == "" {
+			sender = "unknown"
+		}
 	}
 
 	database, err := db.Open(*dbPath)
@@ -73,8 +83,9 @@ func (a *App) runServe(args []string) error {
 	defer database.Close()
 
 	a.Logger.Printf("Database opened: %s", *dbPath)
+	a.Logger.Printf("Default sender: %s", sender)
 
-	srv := mcp.NewServer(database)
+	srv := mcp.NewServer(database, sender)
 
 	if *sseAddr != "" {
 		a.Logger.Printf("Starting MCP server on SSE %s...", *sseAddr)

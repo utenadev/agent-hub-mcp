@@ -1,0 +1,20 @@
+linters:
+  enable:
+    - goimports
+    - errcheck
+    - ghostascan
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/yklcs/agent-hub-mcp
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

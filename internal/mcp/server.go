@@ -11,12 +11,13 @@ import (
 
 // Server wraps the MCP server with our database.
 type Server struct {
-	mcpServer *server.MCPServer
-	db        *db.DB
+	mcpServer     *server.MCPServer
+	db            *db.DB
+	DefaultSender string
 }
 
-// NewServer creates a new MCP server with the given database.
-func NewServer(database *db.DB) *Server {
+// NewServer creates a new MCP server with the given database and default sender.
+func NewServer(database *db.DB, defaultSender string) *Server {
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		"agent-hub-mcp",
@@ -25,8 +26,9 @@ func NewServer(database *db.DB) *Server {
 	)
 
 	s := &Server{
-		mcpServer: mcpServer,
-		db:        database,
+		mcpServer:     mcpServer,
+		db:            database,
+		DefaultSender: defaultSender,
 	}
 
 	// Register tools
