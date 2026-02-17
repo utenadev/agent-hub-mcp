@@ -79,3 +79,61 @@ func TestApp_Run_Serve_InvalidDBPath(t *testing.T) {
 		t.Error("expected error for invalid database path")
 	}
 }
+
+func TestApp_Run_Doctor(t *testing.T) {
+	app := NewApp()
+	var stdout, stderr bytes.Buffer
+
+	err := app.Run([]string{"agent-hub", "doctor", "-db", ":memory:"}, nil, &stdout, &stderr)
+	_ = err
+}
+
+func TestApp_Run_Doctor_InvalidDBPath(t *testing.T) {
+	app := NewApp()
+	var stdout, stderr bytes.Buffer
+
+	err := app.Run([]string{"agent-hub", "doctor", "-db", "/nonexistent/path/to/db.db"}, nil, &stdout, &stderr)
+	_ = err
+}
+
+func TestApp_Run_Setup(t *testing.T) {
+	app := NewApp()
+	var stdout, stderr bytes.Buffer
+
+	tempDir := t.TempDir()
+	dbPath := tempDir + "/test.db"
+
+	err := app.Run([]string{"agent-hub", "setup", "-db", dbPath}, nil, &stdout, &stderr)
+	if err != nil {
+		t.Errorf("setup command failed: %v", err)
+	}
+}
+
+func TestApp_Run_Setup_WithForce(t *testing.T) {
+	app := NewApp()
+	var stdout, stderr bytes.Buffer
+
+	tempDir := t.TempDir()
+	dbPath := tempDir + "/test.db"
+
+	err := app.Run([]string{"agent-hub", "setup", "-db", dbPath}, nil, &stdout, &stderr)
+	if err != nil {
+		t.Errorf("first setup command failed: %v", err)
+	}
+
+	err = app.Run([]string{"agent-hub", "setup", "-db", dbPath, "-force"}, nil, &stdout, &stderr)
+	if err != nil {
+		t.Errorf("second setup command with -force failed: %v", err)
+	}
+}
+
+func TestApp_Run_Doctor_WithEnvVars(t *testing.T) {
+	t.Setenv("BBS_AGENT_ID", "test-agent")
+	t.Setenv("BBS_AGENT_ROLE", "test-role")
+
+	app := NewApp()
+	var stdout, stderr bytes.Buffer
+
+	err := app.Run([]string{"agent-hub", "doctor", "-db", ":memory:"}, nil, &stdout, &stderr)
+	_ = err
+}
