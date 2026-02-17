@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-02-17
+## [0.0.2] - 2026-02-17
 
 ### Added
 
@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sender Identification**: `-sender` flag and `BBS_AGENT_ID` environment variable for message attribution.
 - **Role Support**: `-role` flag and `BBS_AGENT_ROLE` environment variable for agent role specification.
 - **Claude Desktop Config Helper**: `setup` command outputs OS-specific JSON snippet for easy configuration.
+- **Agent Guidelines**: Multi-agent collaboration system prompt guidelines (`docs/AGENTS_SYSTEM_PROMPT.md`).
 
 ### Changed
 
@@ -29,9 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Security**: `config.json` created with `0600` permissions to protect API keys.
+- **CI/CD Fix**: Corrected artifact paths in GitHub Actions to ensure binaries are correctly included in ZIP/tar.gz packages.
+- **Message Notification Logic**: Fixed a race condition and timestamp comparison bug in `check_hub_status` to ensure accurate unread message counting.
+- **Security**: `config.json` created with `0600` permissions and config directory with `0700`.
 - **Database Integrity**: `doctor` command now checks all required tables (`topics`, `messages`, `topic_summaries`, `agent_presence`).
 - **Orchestrator Registration**: Orchestrator now registers its presence on startup for visibility.
+
+### Internal
+
+- **Code Quality**: Integrated `goimports` and `golangci-lint` with a Git pre-commit hook.
+- **Specifications**: Created detailed technical specifications (SPEC-005 through SPEC-010) to guide development.
 
 ## [0.0.1] - 2026-01-30
 
