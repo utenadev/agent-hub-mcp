@@ -7,18 +7,18 @@ import (
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
-// Model is the Bubble Tea model for the BBS dashboard.
+// Model is the Bubble Tea model for the Agent Hub dashboard.
 type Model struct {
-	db                  *db.DB
-	Topics              []db.Topic
-	SelectedTopic       *db.Topic
-	Messages            []db.Message
-	Summaries           []db.TopicSummary
-	SelectedSummaryIdx  int
-	FocusPane           FocusPane
-	Loading             bool
-	ErrorMessage        string
-	InputMode           InputMode
+	db                 *db.DB
+	Topics             []db.Topic
+	SelectedTopic      *db.Topic
+	Messages           []db.Message
+	Summaries          []db.TopicSummary
+	SelectedSummaryIdx int
+	FocusPane          FocusPane
+	Loading            bool
+	ErrorMessage       string
+	InputMode          InputMode
 }
 
 // InputMode represents the current input mode.
@@ -62,7 +62,7 @@ type SummariesLoadedMsg struct {
 // SelectTopicMsg is sent to select a topic.
 type SelectTopicMsg int
 
-// NewModel creates a new BBS dashboard model.
+// NewModel creates a new Agent Hub dashboard model.
 func NewModel(database *db.DB) Model {
 	return Model{
 		db:                 database,
@@ -228,7 +228,7 @@ func (m Model) loadSummariesCmd() tea.Cmd {
 	}
 	return func() tea.Msg {
 		// Get all summaries for this topic (most recent first)
-	 summaries, err := m.db.GetSummariesByTopic(int64(m.SelectedTopic.ID))
+		summaries, err := m.db.GetSummariesByTopic(int64(m.SelectedTopic.ID))
 		if err != nil {
 			return SummariesLoadedMsg{Summaries: []db.TopicSummary{}, Error: err}
 		}

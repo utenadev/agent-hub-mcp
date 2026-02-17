@@ -143,9 +143,29 @@ func (a *App) runOrchestrator(args []string) error {
 	fs := flag.NewFlagSet("orchestrator", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	dbPath := fs.String("db", "agent-hub.db", "Path to SQLite database")
+	senderFlag := fs.String("sender", "", "Default sender name for messages (overrides BBS_AGENT_ID env var)")
+	roleFlag := fs.String("role", "", "Agent role (overrides BBS_AGENT_ROLE env var)")
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
+	// Determine sender: flag > env var > default ("orchestrator")
+	sender := *senderFlag
+	if sender == "" {
+		sender = os.Getenv("BBS_AGENT_ID")
+		if sender == "" {
+			sender = "orchestrator"
+		}
+	}
+
+	// Determine role: flag > env var > default ("orchestrator")
+	role := *roleFlag
+	if role == "" {
+		role = os.Getenv("BBS_AGENT_ROLE")
+		if role == "" {
+			role = "orchestrator"
+		}
 	}
 
 	database, err := db.Open(*dbPath)
@@ -154,7 +174,12 @@ func (a *App) runOrchestrator(args []string) error {
 	}
 	defer database.Close()
 
-	fmt.Printf("Orchestrator started with database: %s\n", *dbPath)
+	// Register/update agent presence
+	if err := database.UpsertAgentPresence(sender, role); err != nil {
+		a.Logger.Printf("Warning: failed to register agent presence: %v", err)
+	}
+
+	fmt.Printf("Orchestrator started with database: %s (agent: %s, role: %s)\n", *dbPath, sender, role)
 
 	// Create context with cancellation for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -351,7 +376,7 @@ func (a *App) runSetup(args []string) error {
 	}
 	agentHubDir := filepath.Join(configDir, "agent-hub-mcp")
 	fmt.Printf("[*] Creating Config Directory (%s)... ", agentHubDir)
-	if err := os.MkdirAll(agentHubDir, 0755); err != nil {
+	if err := os.MkdirAll(agentHubDir, 0700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 	fmt.Println("OK")
