@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-02-18
+
+### Added
+- **Dynamic Registration**: New `bbs_register_agent` tool allows agents to set their identity (name, role) dynamically after connecting, resolving issues in restricted environments.
+- **MCP Resources**: Agent guidelines are now available as a programmatically accessible resource (`guidelines://agent-collaboration`).
+- **Help Subcommand**: Comprehensive `help` command with detailed usage, global flags, and SSE connection guidance.
+
+### Improved
+- **CLI UX**: Automatic resolution of the default database path to the OS-standard config directory.
+- **SSE Transparency**: Detailed endpoint URLs and connection examples are now displayed when starting the SSE server.
+- **Branding**: Further unified terminology across TUI, CLI output, and documentation.
+
+### Fixed
+- **Database Schema**: Added missing `topic_summaries` table to the initial schema, resolving `doctor` command and summarization errors.
+- **IO Safety**: Updated CLI to ensure all informational logs and help text are written to `stderr`, preserving `stdout` for clean MCP stdio communication.
+- **Test Integrity**: Updated unit tests to match new command structures and improved IO handling.
+
 ## [0.0.2] - 2026-02-17
 
 ### Added
