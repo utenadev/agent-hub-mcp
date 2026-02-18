@@ -35,11 +35,7 @@ func (s *Server) handleBBSPost(ctx context.Context, req mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("content is required and must be a string"), nil
 	}
 
-	// Use the server's default sender (configured via -sender flag or BBS_AGENT_ID env var)
-	sender := s.DefaultSender
-	if sender == "" {
-		sender = "unknown"
-	}
+	sender := s.getSender()
 
 	id, err := s.db.PostMessage(int64(topicID), sender, content)
 	if err != nil {
@@ -78,15 +74,14 @@ func (s *Server) handleBBSRead(ctx context.Context, req mcp.CallToolRequest) (*m
 
 // handleCheckHubStatus handles the check_hub_status tool.
 func (s *Server) handleCheckHubStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get unread message count BEFORE updating last check time
-	unreadCount, err := s.db.CountUnreadMessages(s.DefaultSender)
+	sender := s.getSender()
+
+	unreadCount, err := s.db.CountUnreadMessages(sender)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to count unread messages: %v", err)), nil
 	}
 
-	// Update last check time AFTER getting unread count
-	if err := s.db.UpdateAgentCheckTime(s.DefaultSender); err != nil {
-		// Non-fatal: continue with status check
+	if err := s.db.UpdateAgentCheckTime(sender); err != nil {
 		fmt.Printf("Warning: failed to update check time: %v\n", err)
 	}
 
@@ -113,7 +108,7 @@ func (s *Server) handleCheckHubStatus(ctx context.Context, req mcp.CallToolReque
 
 	// Inject prompt if there are unread messages
 	if unreadCount > 0 {
-		result += "\n\n【システム通知】BBSに未読メッセージがあります。作業の区切りで `bbs_read` を実行して指示を確認してください。"
+		result += "\n\n【重要：連携ガイドライン】BBSに未読メッセージがあります。リソース `guidelines://agent-collaboration` に基づき、現在の作業を保存し、最優先で `bbs_read` を実行してください。確認後は `update_status` で状況を報告してください。"
 	}
 
 	return mcp.NewToolResultText(result), nil
@@ -121,12 +116,13 @@ func (s *Server) handleCheckHubStatus(ctx context.Context, req mcp.CallToolReque
 
 // handleUpdateStatus handles the update_status tool.
 func (s *Server) handleUpdateStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	sender := s.getSender()
+
 	status, err := req.RequireString("status")
 	if err != nil {
 		return mcp.NewToolResultError("status is required and must be a string"), nil
 	}
 
-	// Get optional topic_id
 	topicIDFloat := req.GetFloat("topic_id", 0)
 	var topicID *int64
 	if topicIDFloat > 0 {
@@ -134,15 +130,49 @@ func (s *Server) handleUpdateStatus(ctx context.Context, req mcp.CallToolRequest
 		topicID = &tid
 	}
 
-	// Update status in database
-	if err := s.db.UpdateAgentStatus(s.DefaultSender, status, topicID); err != nil {
+	if err := s.db.UpdateAgentStatus(sender, status, topicID); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to update status: %v", err)), nil
 	}
 
-	var topicInfo string
+	topicInfo := ""
 	if topicID != nil {
 		topicInfo = fmt.Sprintf(" on topic %d", *topicID)
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Status updated: %s%s", status, topicInfo)), nil
+}
+
+// handleRegisterAgent handles the bbs_register_agent tool.
+func (s *Server) handleRegisterAgent(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name, err := req.RequireString("name")
+	if err != nil {
+		return mcp.NewToolResultError("name is required and must be a string"), nil
+	}
+
+	role, err := req.RequireString("role")
+	if err != nil {
+		return mcp.NewToolResultError("role is required and must be a string"), nil
+	}
+
+	status := req.GetString("status", "online")
+
+	topicIDFloat := req.GetFloat("topic_id", 0)
+	var topicID *int64
+	if topicIDFloat > 0 {
+		tid := int64(topicIDFloat)
+		topicID = &tid
+	}
+
+	if err := s.db.UpsertAgentPresence(name, role); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to register agent: %v", err)), nil
+	}
+
+	s.CurrentSender = name
+	s.DefaultRole = role
+
+	if err := s.db.UpdateAgentStatus(name, status, topicID); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to set initial status: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Agent registered: name=%s, role=%s, status=%s", name, role, status)), nil
 }

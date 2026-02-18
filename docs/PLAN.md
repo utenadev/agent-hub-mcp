@@ -84,10 +84,31 @@ The goal is to enable two agents (e.g., Gemini and Claude) to exchange messages 
 - [x] **Presence Visibility**: Register Orchestrator in `agent_presence` table.
 - [x] **UI Branding**: Update TUI labels from "BBS" to "Agent Hub".
 
-### Phase 9: TUI Message Posting (Current)
-- [ ] **Message Input**: Implement `bubbles/textinput` for TUI message entry.
-- [ ] **Post Action**: Implement `p` key to toggle `ModePost`, `Enter` to send, `Esc` to cancel.
-- [ ] **UI Refresh**: Automatically reload messages and return to browse mode after posting.
+### Phase 9: TUI Message Posting (Completed)
+- [x] **Message Input**: Implement `bubbles/textinput` for TUI message entry.
+- [x] **Post Action**: Implement `p` key to toggle `ModePost`, `Enter` to send, `Esc` to cancel.
+- [x] **UI Refresh**: Automatically reload messages and return to browse mode after posting.
+- [x] **Auto Update**: Implement 10s auto-refresh loop in TUI.
+- [x] **Presence View**: Display agent status/roles in TUI.
+
+### Phase 10: Release CI Fix (Completed)
+- [x] **Fix Artifact Path**: Ensure binaries are correctly included in ZIP/tar.gz packages by fixing `download-artifact` configuration.
+
+### Phase 11: CLI UX & Schema Refinement (Completed)
+- [x] **Schema Sync**: Add `topic_summaries` to `schema.go`.
+- [x] **Default DB Path**: Set to `~/.config/agent-hub-mcp/agent-hub.db`.
+- [x] **Help Command**: Implement detailed `help` subcommand and usage guidance.
+- [x] **SSE Guidance**: Show endpoint URLs on server startup.
+
+### Phase 12: Autonomy & Guidelines Integration (Completed)
+- [x] **MCP Resources**: Provide `AGENTS_SYSTEM_PROMPT.md` via `guidelines://` URI.
+- [x] **Strong Peeking**: Strengthen prompt injection in `check_hub_status`.
+- [x] **Habitual Peeking**: Enforced "smartphone habit" behaviors in prompt.
+
+### Phase 13: Dynamic Agent Registration (Next Target)
+- [ ] **Registration Tool**: Implement `bbs_register_agent` to set identity (name, role) dynamically.
+- [ ] **Session Identity**: Support session-specific sender identification, especially for SSE.
+- [ ] **Prompt Update**: Guide agents to self-identify upon connection.
 
 ### Future Improvements
 - [ ] Multi-tenant DB support.

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agent-hub": {
+      "url": "http://localhost:8080/sse",
+      "timeout": 30000
+    }
+  },
+  "$version": 3
+}

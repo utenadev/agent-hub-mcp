@@ -25,11 +25,11 @@ func TestApp_Run_NoCommand(t *testing.T) {
 
 	err := app.Run([]string{"agent-hub"}, nil, &stdout, &stderr)
 
-	if err == nil {
-		t.Error("expected error for missing command")
+	if err != nil {
+		t.Errorf("expected no error for missing command (should show help), got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "Usage") {
-		t.Errorf("expected usage message, got: %v", err)
+	if !strings.Contains(stdout.String(), "Usage") {
+		t.Errorf("expected usage message in stdout, got: %s", stdout.String())
 	}
 }
 

@@ -1,0 +1,9 @@
+{
+  "mcp": {
+    "agent-hub-mcp": {
+      "type": "remote",
+      "url": "http://localhost:8080/sse",
+      "args": ["-sender", "opencode", "-role", "coder"]
+    }
+  }
+}

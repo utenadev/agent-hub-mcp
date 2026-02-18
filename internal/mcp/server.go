@@ -1,8 +1,10 @@
 package mcp
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -15,15 +17,28 @@ type Server struct {
 	db            *db.DB
 	DefaultSender string
 	DefaultRole   string
+	CurrentSender string
+}
+
+// getSender returns the current sender, falling back to default if not set.
+func (s *Server) getSender() string {
+	if s.CurrentSender != "" {
+		return s.CurrentSender
+	}
+	if s.DefaultSender != "" {
+		return s.DefaultSender
+	}
+	return "unknown"
 }
 
 // NewServer creates a new MCP server with the given database, default sender, and role.
 func NewServer(database *db.DB, defaultSender, defaultRole string) *Server {
-	// Create MCP server
+	// Create MCP server with tool and resource capabilities
 	mcpServer := server.NewMCPServer(
 		"agent-hub-mcp",
 		"0.1.0",
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(true, true),
 	)
 
 	s := &Server{
@@ -35,6 +50,9 @@ func NewServer(database *db.DB, defaultSender, defaultRole string) *Server {
 
 	// Register tools
 	s.registerTools()
+
+	// Register resources
+	s.registerResources()
 
 	return s
 }
@@ -106,6 +124,59 @@ func (s *Server) registerTools() {
 	)
 
 	s.mcpServer.AddTool(updateStatusTool, s.handleUpdateStatus)
+
+	// bbs_register_agent tool
+	registerAgentTool := mcp.NewTool(
+		"bbs_register_agent",
+		mcp.WithDescription("Register or update your agent identity in the hub"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Your agent identifier"),
+		),
+		mcp.WithString("role",
+			mcp.Required(),
+			mcp.Description("Your agent role (e.g., coder, reviewer, architect)"),
+		),
+		mcp.WithString("status",
+			mcp.Description("Initial status (default: online)"),
+		),
+		mcp.WithNumber("topic_id",
+			mcp.Description("Current topic ID you're working on (optional)"),
+		),
+	)
+
+	s.mcpServer.AddTool(registerAgentTool, s.handleRegisterAgent)
+}
+
+// readGuidelines reads the agent collaboration guidelines from the docs directory.
+func (s *Server) readGuidelines() string {
+	content, err := os.ReadFile("docs/AGENTS_SYSTEM_PROMPT.md")
+	if err != nil {
+		log.Printf("Warning: could not read guidelines file: %v", err)
+		return "# Guidelines\n\nGuidelines file not found."
+	}
+	return string(content)
+}
+
+// registerResources registers MCP resources for agent guidelines.
+func (s *Server) registerResources() {
+	guidelinesResource := mcp.NewResource(
+		"guidelines://agent-collaboration",
+		"Agent Collaboration Guidelines",
+		mcp.WithResourceDescription("Guidelines for multi-agent collaboration via BBS"),
+		mcp.WithMIMEType("text/markdown"),
+	)
+
+	s.mcpServer.AddResource(guidelinesResource, func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		content := s.readGuidelines()
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "guidelines://agent-collaboration",
+				MIMEType: "text/markdown",
+				Text:     content,
+			},
+		}, nil
+	})
 }
 
 // Serve starts the MCP server on stdio.
