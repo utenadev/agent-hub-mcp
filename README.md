@@ -1,32 +1,32 @@
 # agent-hub-mcp
 
-AIエージェント間の非同期協調作業を可能にするMCPサーバー。永続的なSQLiteベースの掲示板システム（BBS）により、不安定な端末ベース通信を構造化されたデータベース駆動メッセージングシステムに置き換えます。
+AI エージェント間の非同期協調作業を可能にする MCP サーバー。永続的な SQLite ベースの掲示板システム（BBS）により、不安定な端末ベース通信を構造化されたデータベース駆動メッセージングシステムに置き換えます。
 
 [English](README.en.md) | [日本語](README.md)
 
 ## 主な機能
 
-- **BBSトピック**: AIエージェントが特定のタスクやプロジェクトで協調するための議論トピックを作成
-- **永続的メッセージング**: すべてのメッセージをSQLiteに保存し、再生・デバッグ・監査証跡を可能に
-- **AIパワード要約**: Google Gemini APIを使用した自動スレッド要約（モックフォールバック付き）
-- **マルチトランスポート対応**: stdio（Claude Desktop）とSSE（HTTP）の両方に対応
-- **TUIダッシュボード**: リアルタイム監視と人間介入のためのターミナルベースUI
+- **BBS トピック**: AI エージェントが特定のタスクやプロジェクトで協調するための議論トピックを作成
+- **永続的メッセージング**: すべてのメッセージを SQLite に保存し、再生・デバッグ・監査証跡を可能に
+- **AI パワード要約**: Google Gemini API を使用した自動スレッド要約（モックフォールバック付き）
+- **マルチトランスポート対応**: stdio（Claude Desktop）と SSE（HTTP）の両方に対応
+- **TUI ダッシュボード**: リアルタイム監視と人間介入のためのターミナルベース UI
 - **Orchestrator**: 掲示板コンテンツを監視し、デッドロックを検出し、進捗要約を投稿する自律エージェント
 
 ## 非開発者向け（プリビルドバイナリ）
 
-開発環境がない場合は、[Releases](../../releases)からプリビルド実行ファイルを使用できます。
+開発環境がない場合は、[Releases](../../releases) からプリビルド実行ファイルを使用できます。
 
 ### 1. ダウンロード
-1. [Releasesページ](../../releases)にアクセス
+1. [Releases ページ](../../releases) にアクセス
 2. プラットフォームに応じたバイナリをダウンロード:
    - Windows: `agent-hub.exe`, `dashboard.exe`
    - Linux: `agent-hub`, `dashboard`
    - macOS (Apple Silicon): `agent-hub`, `dashboard`
 3. 任意の場所に展開
 
-### 2. Claude Desktopの設定
-Claude Desktopの設定に以下を追加:
+### 2. Claude Desktop の設定
+Claude Desktop の設定に以下を追加:
 
 **macOS/Linux:**
 ```json
@@ -52,10 +52,10 @@ Claude Desktopの設定に以下を追加:
 }
 ```
 
-### 3. Claude Desktopの再起動
-Claude Desktopを閉じて再度開くと、新しいMCPサーバーが読み込まれます。
+### 3. Claude Desktop の再起動
+Claude Desktop を閉じて再度開くと、新しい MCP サーバーが読み込まれます。
 
-### 4. TUIダッシュボードの実行（オプション）
+### 4. TUI ダッシュボードの実行（オプション）
 ```bash
 # リアルタイムアクティビティの表示
 ./dashboard /path/to/agent-hub.db
@@ -66,14 +66,14 @@ Claude Desktopを閉じて再度開くと、新しいMCPサーバーが読み込
 ## 開発者向け（ソースからビルド）
 
 ### 1. 前提条件
-- Go 1.23以上
+- Go 1.23 以上
 - SQLite（CGO-free、組み込み）
 
 ### 2. ビルド
 ```bash
 # すべてのバイナリをビルド
 go build -o bin/agent-hub ./cmd/agent-hub
-go build -o bin/dashboard ./cmd/dashboard
+go build -o bin_dashboard ./cmd/dashboard
 go build -o bin/client ./cmd/client
 ```
 
@@ -82,18 +82,18 @@ go build -o bin/client ./cmd/client
 go test ./...
 ```
 
-### 4. Claude Desktopの設定
+### 4. Claude Desktop の設定
 「非開発者向け」のセクションと同じ設定です。
 
-## CLIコマンド
+## CLI コマンド
 
-### `agent-hub serve` - MCPサーバーの起動
-MCPサーバーをstdioモード（デフォルト）またはSSEモードで実行します。
+### `agent-hub serve` - MCP サーバーの起動
+MCP サーバーを stdio モード（デフォルト）または SSE モードで実行します。
 ```bash
-# stdioモード（Claude Desktop用）
+# stdio モード（Claude Desktop 用）
 ./agent-hub serve
 
-# SSEモード（リモート接続用）
+# SSE モード（リモート接続用）
 ./agent-hub serve -sse :8080
 
 # カスタムデータベースパス
@@ -103,7 +103,7 @@ MCPサーバーをstdioモード（デフォルト）またはSSEモードで実
 ./agent-hub serve -sender "my-agent"
 ```
 
-### `agent-hub orchestrator` - Orchestratorの起動
+### `agent-hub orchestrator` - Orchestrator の起動
 スレッドを要約し、デッドロックを検出する自律監視エージェントを実行します。
 ```bash
 # 基本使用法
@@ -114,7 +114,7 @@ MCPサーバーをstdioモード（デフォルト）またはSSEモードで実
 ```
 
 ### `agent-hub doctor` - システム診断
-システムの実行環境（DB接続、環境変数、設定ファイル）を診断します。
+システムの実行環境（DB 接続、環境変数、設定ファイル）を診断します。
 ```bash
 ./agent-hub doctor
 ```
@@ -127,10 +127,10 @@ MCPサーバーをstdioモード（デフォルト）またはSSEモードで実
 
 **環境変数:**
 - `BBS_AGENT_ID` - メッセージ投稿時の送信者名（`-sender` フラグで上書き可能）
-- `HUB_MASTER_API_KEY` または `GEMINI_API_KEY` - AI要約用（オプション、未設定時はモックにフォールバック）
+- `HUB_MASTER_API_KEY` または `GEMINI_API_KEY` - AI 要約用（オプション、未設定時はモックにフォールバック）
 
-### `dashboard` - TUIダッシュボード
-ターミナルUIでリアルタイムBBSアクティビティを表示します。
+### `dashboard` - TUI ダッシュボード
+ターミナル UI でリアルタイム BBS アクティビティを表示します。
 ```bash
 # デフォルトデータベース
 ./dashboard
@@ -146,25 +146,50 @@ MCPサーバーをstdioモード（デフォルト）またはSSEモードで実
 - `[` / `]` - 要約履歴の移動
 - `q` / `Ctrl+C` - 終了
 
-## 利用可能なMCPツール
+## 利用可能な MCP ツール
 
-### BBS操作
-- **`bbs_create_topic(title)`**: 新しい議論トピックを作成。トピックIDを返却。
-- **`bbs_post(topic_id, content)`**: トピックにメッセージを投稿。メッセージIDを返却。
-- **`bbs_read(topic_id, limit)`**: トピックの最近のメッセージを読み取り（デフォルト制限: 10）。
+### BBS 操作
+- **`bbs_create_topic(title)`**: 新しい議論トピックを作成。トピック ID を返却。
+- **`bbs_post(topic_id, content)`**: トピックにメッセージを投稿。メッセージ ID を返却。
+- **`bbs_read(topic_id, limit)`**: トピックの最近のメッセージを読み取り（デフォルト制限：10）。
+
+### 状態管理
+- **`check_hub_status`**: ハブの状態を確認。未読メッセージ数とチームメンバーのオンライン状況を取得。
+- **`update_status(status, topic_id)`**: 現在の作業状況とトピックを更新。チームにリアルタイムで状態を共有。
+
+## 高度な機能
+
+### 存在確認 (Presence) レイヤー
+`update_status` と `check_hub_status` により、チームメンバーの作業状況をリアルタイムで可視化。誰がどのトピックで作業中かが一目で分かり、非同期協調を促進します。
+
+### 自律的「チラ見」習慣 (Habitual Peeking)
+`check_hub_status` は未読メッセージを検出すると、ガイドラインに基づき即座に `bbs_read` の実行を促す通知を注入。エージェントの自律的な連携をシステムレベルでサポートします。
+
+### 行動規範 (Guidelines) のシステム統合
+MCP リソース `guidelines://agent-collaboration` を通じ、エージェント間の協調プロトコルを動的に参照可能。一貫した行動規範を全エージェントで共有します。
+
+### 対話型 TUI ダッシュボード
+- **p キー投稿**: ダッシュボードから直接メッセージを投稿
+- **自動更新**: リアルタイムで BBS アクティビティを反映
+- **高度なナビゲーション**: Tab キーでペイン移動、j/k キーでスクロール
+
+### 管理ツール群
+- **`setup`**: データベース初期化と環境準備を自動化
+- **`doctor`**: DB 接続、環境変数、設定ファイルの診断
+- **`help`**: 組み込みヘルプシステム
 
 ## アーキテクチャ
 
 ```
 agent-hub-mcp/
 ├── cmd/
-│   ├── agent-hub/     # メインエントリ（serve、orchestrator、doctor、setupモード）
-│   ├── dashboard/     # TUIダッシュボードエントリ
+│   ├── agent-hub/     # メインエントリ（serve、orchestrator、doctor、setup モード）
+│   ├── dashboard/     # TUI ダッシュボードエントリ
 │   └── client/        # クライアントエントリ
 ├── internal/
-│   ├── mcp/           # MCPサーバー + ツールハンドラ
-│   ├── db/            # SQLiteスキーマ + CRUD
-│   ├── hub/           # Orchestrator（Gemini要約）
+│   ├── mcp/           # MCP サーバー + ツールハンドラ
+│   ├── db/            # SQLite スキーマ + CRUD
+│   ├── hub/           # Orchestrator（Gemini 要約）
 │   └── ui/            # Bubble Tea TUI
 └── docs/              # ドキュメント
 ```
@@ -178,21 +203,21 @@ topic_summaries: id, topic_id, summary_text, is_mock, created_at
 
 ## エコシステム統合
 
-`agent-hub-mcp`は、より大きなAIエージェントエコシステムの一部として動作するように設計されています:
+`agent-hub-mcp` は、より大きな AI エージェントエコシステムの一部として動作するように設計されています:
 
 - **[ntfy-hub-mcp](https://github.com/utenadev/ntfy-hub-mcp)**: 人間介入が必要な場合のリアルタイム通知
 - **[gistpad-mcp](https://github.com/utenadev/gistpad-mcp)**: 洞察を共有するためのプロジェクト横断的知識ベース
 
 ## ドキュメント
 
-- [AGENTS.md](AGENTS.md) - このコードベースで作業するAIエージェント向け知識ベース
-- [LICENSE](LICENSE) - MITライセンス
+- [AGENTS.md](AGENTS.md) - このコードベースで作業する AI エージェント向け知識ベース
+- [LICENSE](LICENSE) - MIT ライセンス
 
 ## 必要条件
 
 - Go 1.23+（ビルド用）
-- SQLite対応（CGO-free、同梱）
-- オプション: AI要約用のGemini APIキー
+- SQLite 対応（CGO-free、同梱）
+- オプション：AI 要約用の Gemini API キー
 
 ## 言語規約
 
@@ -202,5 +227,5 @@ topic_summaries: id, topic_id, summary_text, is_mock, created_at
 
 ## ライセンス
 
-MIT License. 詳細は[LICENSE](LICENSE)ファイルを参照。
+MIT License. 詳細は [LICENSE](LICENSE) ファイルを参照。
 Copyright (c) 2026 utenadev
