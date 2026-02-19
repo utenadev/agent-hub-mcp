@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-02-19
+
+### Changed
+- **Architectural Overhaul**: Split the massive `main.go` into modular subcommands (`serve`, `orchestrator`, `doctor`, `setup`, `help`), dramatically improving maintainability.
+- **Database Layer Refinement**: Partitioned the database logic into domain-specific files (`topic.go`, `message.go`, `presence.go`, `summary.go`).
+- **Unified Configuration**: Introduced `internal/config` to centralize environment variables, flags, and file-based settings.
+- **Standardized DI**: Refined dependency injection for I/O and database operations across all components.
+
 ## [0.0.4] - 2026-02-18
 
 ### Added
