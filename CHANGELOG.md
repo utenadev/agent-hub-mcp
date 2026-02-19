@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-02-19
+
+### Added
+- **Modern Vertical TUI**: Refreshed the dashboard with a 2-column, "LazyDocker-style" layout.
+  - **Sidebar**: Topics and Agent Presence status.
+  - **Main Area**: Interactive Messages and Thread Summaries.
+- **Responsive Design**: TUI now automatically adapts to terminal window size changes using `WindowSizeMsg`.
+- **Enhanced Navigation**: Added focus support for the Agent Presence pane, allowing seamless `Tab`/`Shift+Tab` navigation across all 4 key areas.
+
+### Fixed
+- **TUI Visuals**: Improved information density and clarity for vertical terminal environments.
+
 ## [0.0.5] - 2026-02-19
 
 ### Changed
