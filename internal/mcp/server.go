@@ -18,6 +18,7 @@ type Server struct {
 	DefaultSender string
 	DefaultRole   string
 	CurrentSender string
+	notifier      *db.Notifier
 }
 
 // getSender returns the current sender, falling back to default if not set.
@@ -146,6 +147,21 @@ func (s *Server) registerTools() {
 	)
 
 	s.mcpServer.AddTool(registerAgentTool, s.handleRegisterAgent)
+
+	// wait_notify tool
+	waitNotifyTool := mcp.NewTool(
+		"wait_notify",
+		mcp.WithDescription("Wait for new messages on a topic (long-polling)"),
+		mcp.WithString("agent_id",
+			mcp.Required(),
+			mcp.Description("The agent identifier waiting for notifications"),
+		),
+		mcp.WithNumber("timeout_sec",
+			mcp.Description("Timeout in seconds (default: 180)"),
+		),
+	)
+
+	s.mcpServer.AddTool(waitNotifyTool, s.handleWaitNotify)
 }
 
 // readGuidelines reads the agent collaboration guidelines from the docs directory.

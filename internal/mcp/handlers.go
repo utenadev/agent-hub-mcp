@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
 // handleBBSCreateTopic handles the bbs_create_topic tool.
@@ -40,6 +42,15 @@ func (s *Server) handleBBSPost(ctx context.Context, req mcp.CallToolRequest) (*m
 	id, err := s.db.PostMessage(int64(topicID), sender, content)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to post message: %v", err)), nil
+	}
+
+	if s.notifier != nil {
+		s.notifier.NotifyAll(db.Notification{
+			AgentID:   sender,
+			TopicID:   int64(topicID),
+			Message:   content,
+			Timestamp: time.Now(),
+		})
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Message posted with ID: %d", id)), nil
@@ -140,6 +151,64 @@ func (s *Server) handleUpdateStatus(ctx context.Context, req mcp.CallToolRequest
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Status updated: %s%s", status, topicInfo)), nil
+}
+
+// handleWaitNotify handles the wait_notify tool.
+func (s *Server) handleWaitNotify(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	agentID, err := req.RequireString("agent_id")
+	if err != nil {
+		return mcp.NewToolResultError("agent_id is required and must be a string"), nil
+	}
+
+	timeoutSec := int(req.GetFloat("timeout_sec", 180))
+	if timeoutSec <= 0 {
+		timeoutSec = 180
+	}
+
+	if s.notifier == nil {
+		s.notifier = db.NewNotifier()
+	}
+
+	ch := s.notifier.Register(agentID)
+	defer s.notifier.Unregister(agentID)
+
+	timeout := time.After(time.Duration(timeoutSec) * time.Second)
+
+	select {
+	case notification := <-ch:
+		response := map[string]interface{}{
+			"has_new": true,
+			"status":  "new_messages",
+			"message": fmt.Sprintf("New message on topic %d: %s", notification.TopicID, notification.Message),
+		}
+		data, err := json.MarshalIndent(response, "", "  ")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to marshal response: %v", err)), nil
+		}
+		return mcp.NewToolResultText(string(data)), nil
+	case <-timeout:
+		response := map[string]interface{}{
+			"has_new": false,
+			"status":  "timeout",
+			"message": fmt.Sprintf("No new messages within %d seconds", timeoutSec),
+		}
+		data, err := json.MarshalIndent(response, "", "  ")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to marshal response: %v", err)), nil
+		}
+		return mcp.NewToolResultText(string(data)), nil
+	case <-ctx.Done():
+		response := map[string]interface{}{
+			"has_new": false,
+			"status":  "cancelled",
+			"message": "Wait operation cancelled",
+		}
+		data, err := json.MarshalIndent(response, "", "  ")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to marshal response: %v", err)), nil
+		}
+		return mcp.NewToolResultText(string(data)), nil
+	}
 }
 
 // handleRegisterAgent handles the bbs_register_agent tool.
