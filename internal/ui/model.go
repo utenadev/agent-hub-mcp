@@ -23,6 +23,11 @@ type Model struct {
 	ErrorMessage       string
 	InputMode          InputMode
 	TextInput          textinput.Model
+	SenderInput        textinput.Model
+	Width              int
+	Height             int
+	TopicSelectorIdx    int
+	PostField          int // 0: sender, 1: content
 }
 
 // InputMode represents the current input mode.
@@ -31,6 +36,7 @@ type InputMode int
 const (
 	ModeBrowse InputMode = iota
 	ModePost
+	ModeTopicSelect
 )
 
 // FocusPane represents which pane has focus.
@@ -38,6 +44,7 @@ type FocusPane int
 
 const (
 	PaneTopics FocusPane = iota
+	PaneAgents
 	PaneMessages
 	PaneSummaries
 )
@@ -79,6 +86,17 @@ func NewModel(database *db.DB) Model {
 	ti.CharLimit = 1000
 	ti.Width = 48
 
+	senderInput := textinput.New()
+	senderInput.Placeholder = "Your name"
+	senderInput.CharLimit = 100
+	senderInput.Width = 20
+	// Set default sender
+	defaultSender := os.Getenv("BBS_AGENT_ID")
+	if defaultSender == "" {
+		defaultSender = "Human"
+	}
+	senderInput.SetValue(defaultSender)
+
 	return Model{
 		db:                 database,
 		Topics:             []db.Topic{},
@@ -87,8 +105,13 @@ func NewModel(database *db.DB) Model {
 		SelectedSummaryIdx: 0,
 		FocusPane:          PaneTopics,
 		Loading:            true,
-		InputMode:          ModeBrowse,
+		InputMode:          ModeTopicSelect,
 		TextInput:          ti,
+		SenderInput:        senderInput,
+		Width:              80,
+		Height:             24,
+		TopicSelectorIdx:   0,
+		PostField:          1, // Start with content field
 	}
 }
 
@@ -105,6 +128,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
+
+	case tea.WindowSizeMsg:
+		m.Width = msg.Width
+		m.Height = msg.Height
+		return m, nil
 
 	case TopicsLoadedMsg:
 		m.Loading = false
@@ -186,10 +214,14 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Submit message
 			if m.TextInput.Value() != "" && m.SelectedTopic != nil {
 				content := m.TextInput.Value()
+				sender := m.SenderInput.Value()
+				if sender == "" {
+					sender = "Human"
+				}
 				m.TextInput.Reset()
 				m.InputMode = ModeBrowse
 				m.TextInput.Blur()
-				return m, m.postMessageCmd(content)
+				return m, m.postMessageCmd(sender, content)
 			}
 			return m, nil
 		default:
@@ -198,6 +230,32 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.TextInput, cmd = m.TextInput.Update(msg)
 			return m, cmd
 		}
+	}
+
+	// Topic selector mode
+	if m.InputMode == ModeTopicSelect {
+		switch msg.String() {
+		case "esc":
+			m.InputMode = ModeBrowse
+			return m, nil
+		case "enter":
+			if len(m.Topics) > m.TopicSelectorIdx {
+				m.InputMode = ModeBrowse
+				return m, m.selectTopicCmd(m.Topics[m.TopicSelectorIdx].ID)
+			}
+			return m, nil
+		case "up", "k":
+			if m.TopicSelectorIdx > 0 {
+				m.TopicSelectorIdx--
+			}
+			return m, nil
+		case "down", "j":
+			if m.TopicSelectorIdx < len(m.Topics)-1 {
+				m.TopicSelectorIdx++
+			}
+			return m, nil
+		}
+		return m, nil
 	}
 
 	// Browse mode key handling
@@ -231,6 +289,12 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Refresh
 		return m, tea.Batch(m.loadTopicsCmd(), m.loadMessagesCmd())
 
+	case "t":
+		// Open topic selector
+		m.InputMode = ModeTopicSelect
+		m.TopicSelectorIdx = 0
+		return m, nil
+
 	case "p":
 		// Enter post mode
 		if m.SelectedTopic != nil {
@@ -244,6 +308,8 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Cycle focus forward between panes
 		switch m.FocusPane {
 		case PaneTopics:
+			m.FocusPane = PaneAgents
+		case PaneAgents:
 			m.FocusPane = PaneMessages
 		case PaneMessages:
 			m.FocusPane = PaneSummaries
@@ -257,8 +323,38 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch m.FocusPane {
 		case PaneTopics:
 			m.FocusPane = PaneSummaries
-		case PaneMessages:
+		case PaneAgents:
 			m.FocusPane = PaneTopics
+		case PaneMessages:
+			m.FocusPane = PaneAgents
+		case PaneSummaries:
+			m.FocusPane = PaneMessages
+		}
+		return m, nil
+
+	case "right", "l":
+		// Cycle focus forward (same as Tab)
+		switch m.FocusPane {
+		case PaneTopics:
+			m.FocusPane = PaneAgents
+		case PaneAgents:
+			m.FocusPane = PaneMessages
+		case PaneMessages:
+			m.FocusPane = PaneSummaries
+		case PaneSummaries:
+			m.FocusPane = PaneTopics
+		}
+		return m, nil
+
+	case "left", "h":
+		// Cycle focus backward (same as Shift+Tab)
+		switch m.FocusPane {
+		case PaneTopics:
+			m.FocusPane = PaneSummaries
+		case PaneAgents:
+			m.FocusPane = PaneTopics
+		case PaneMessages:
+			m.FocusPane = PaneAgents
 		case PaneSummaries:
 			m.FocusPane = PaneMessages
 		}
@@ -353,15 +449,10 @@ type MessagePostedMsg struct {
 	Error error
 }
 
-func (m Model) postMessageCmd(content string) tea.Cmd {
+func (m Model) postMessageCmd(sender, content string) tea.Cmd {
 	return func() tea.Msg {
 		if m.SelectedTopic == nil {
 			return MessagePostedMsg{Error: nil}
-		}
-		// Use BBS_AGENT_ID env var for sender, fallback to "Human"
-		sender := os.Getenv("BBS_AGENT_ID")
-		if sender == "" {
-			sender = "Human"
 		}
 		_, err := m.db.PostMessage(int64(m.SelectedTopic.ID), sender, content)
 		return MessagePostedMsg{Error: err}
