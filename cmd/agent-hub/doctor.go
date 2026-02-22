@@ -7,13 +7,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
 // runDoctor performs system diagnostics.
 func (a *App) runDoctor(args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
-	dbPath := fs.String("db", getDefaultDBPath(), "Path to SQLite database")
+	dbPath := fs.String("db", config.DefaultDBPath(), "Path to SQLite database")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

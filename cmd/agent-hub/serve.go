@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 	"github.com/yklcs/agent-hub-mcp/internal/mcp"
 )
@@ -14,7 +15,7 @@ import (
 func (a *App) runServe(args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	fs.SetOutput(io.Discard) // Suppress flag errors during testing
-	dbPath := fs.String("db", getDefaultDBPath(), "Path to SQLite database")
+	dbPath := fs.String("db", config.DefaultDBPath(), "Path to SQLite database")
 	sseAddr := fs.String("sse", "", "Enable SSE mode on address (e.g., :8080)")
 	senderFlag := fs.String("sender", "", "Default sender name for messages (overrides BBS_AGENT_ID env var)")
 	roleFlag := fs.String("role", "", "Agent role (overrides BBS_AGENT_ROLE env var)")

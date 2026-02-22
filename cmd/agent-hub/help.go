@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
+
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 )
 
 // runHelp displays usage information.
@@ -17,7 +19,7 @@ func (a *App) runHelp(stdout io.Writer) {
 	fmt.Fprintln(stdout, "  setup         Initialize database and configuration")
 	fmt.Fprintln(stdout, "  help          Show this help message")
 	fmt.Fprintln(stdout, "\nGlobal Flags (available for most commands):")
-	fmt.Fprintln(stdout, "  -db string    Path to SQLite database (default: "+getDefaultDBPath()+")")
+	fmt.Fprintln(stdout, "  -db string    Path to SQLite database (default: "+config.DefaultDBPath()+")")
 	fmt.Fprintln(stdout, "\nServe Flags:")
 	fmt.Fprintln(stdout, "  -sse string   Enable SSE mode on address (e.g., :8080)")
 	fmt.Fprintln(stdout, "  -sender name  Default sender name for messages")

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 )
 
@@ -41,7 +42,7 @@ func (db *DB) GetLatestSummary(topicID int64) (*TopicSummary, error) {
 	var s TopicSummary
 	err := row.Scan(&s.ID, &s.TopicID, &s.SummaryText, &s.IsMock, &s.CreatedAt)
 	if err != nil {
-		if err == fmt.Errorf("sql: no rows in result set") {
+		if err == sql.ErrNoRows {
 			return nil, nil // No summary found
 		}
 		return nil, fmt.Errorf("failed to get latest summary: %w", err)

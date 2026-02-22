@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 	"github.com/yklcs/agent-hub-mcp/internal/hub"
 )
@@ -17,7 +18,7 @@ import (
 func (a *App) runOrchestrator(args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := flag.NewFlagSet("orchestrator", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	dbPath := fs.String("db", getDefaultDBPath(), "Path to SQLite database")
+	dbPath := fs.String("db", config.DefaultDBPath(), "Path to SQLite database")
 	senderFlag := fs.String("sender", "", "Default sender name for messages (overrides BBS_AGENT_ID env var)")
 	roleFlag := fs.String("role", "", "Agent role (overrides BBS_AGENT_ROLE env var)")
 

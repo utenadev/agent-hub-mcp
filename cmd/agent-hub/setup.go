@@ -9,13 +9,14 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
 // runSetup initializes the system.
 func (a *App) runSetup(args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
-	dbPath := fs.String("db", getDefaultDBPath(), "Path to SQLite database")
+	dbPath := fs.String("db", config.DefaultDBPath(), "Path to SQLite database")
 	force := fs.Bool("force", false, "Overwrites existing configuration if present")
 	if err := fs.Parse(args); err != nil {
 		return err

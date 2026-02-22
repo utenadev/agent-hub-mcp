@@ -2,17 +2,18 @@ package hub
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"google.golang.org/genai"
 
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
@@ -44,16 +45,13 @@ func DefaultConfig() *Config {
 // Also returns the source name for logging.
 func (c *Config) getAPIKey() (key string, source string) {
 	// 1. Try config file
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		configPath := filepath.Join(homeDir, ".config", "agent-hub-mcp", "config.json")
-		if data, err := os.ReadFile(configPath); err == nil {
-			var config struct {
-				APIKey string `json:"api_key"`
-			}
-			if json.Unmarshal(data, &config) == nil && config.APIKey != "" {
-				return config.APIKey, "Config File (~/.config/agent-hub-mcp/config.json)"
-			}
+	configPath := config.DefaultConfigPath()
+	if data, err := os.ReadFile(configPath); err == nil {
+		var config struct {
+			APIKey string `json:"api_key"`
+		}
+		if json.Unmarshal(data, &config) == nil && config.APIKey != "" {
+			return config.APIKey, "Config File (~/.config/agent-hub-mcp/config.json)"
 		}
 	}
 
@@ -271,6 +269,9 @@ func (o *Orchestrator) generateSummary(ctx context.Context, topicID int64) error
 
 	// Get latest summary to check if chain is broken
 	latestSummary, err := o.db.GetLatestSummary(topicID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Warning: failed to get latest summary: %v", err)
+	}
 
 	// Get recent messages for summarization
 	messages, err := o.db.GetMessages(topicID, 50)

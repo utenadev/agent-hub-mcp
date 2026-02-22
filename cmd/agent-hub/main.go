@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 )
 
 // App holds dependencies for testing
@@ -56,11 +55,4 @@ func (a *App) Run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	}
 }
 
-// getDefaultDBPath returns the standard database path.
-func getDefaultDBPath() string {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return "agent-hub.db"
-	}
-	return filepath.Join(configDir, "agent-hub-mcp", "agent-hub.db")
-}
+
