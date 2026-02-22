@@ -241,3 +241,75 @@ func TestHandleBBSRead(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleRegisterAgent(t *testing.T) {
+	database, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	defer database.Close()
+
+	server := NewServer(database, "default-sender", "default-role")
+
+	tests := []struct {
+		name           string
+		args           map[string]interface{}
+		wantErr        bool
+		expectedSender string
+	}{
+		{
+			name: "valid registration",
+			args: map[string]interface{}{
+				"name": "opencode",
+				"role": "Implementer",
+			},
+			wantErr:        false,
+			expectedSender: "opencode",
+		},
+		{
+			name: "missing name",
+			args: map[string]interface{}{
+				"role": "Implementer",
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing role",
+			args: map[string]interface{}{
+				"name": "opencode",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := mcp.CallToolRequest{
+				Params: mcp.CallToolParams{
+					Arguments: tt.args,
+				},
+			}
+
+			result, _ := server.handleRegisterAgent(context.Background(), req)
+
+			if tt.wantErr {
+				if !result.IsError {
+					t.Error("expected error but got none")
+				}
+			} else {
+				if result.IsError {
+					tc, ok := mcp.AsTextContent(result.Content[0])
+					if !ok {
+						t.Errorf("unexpected error, cannot convert to TextContent")
+					} else {
+						t.Errorf("unexpected error result: %s", tc.Text)
+					}
+				} else {
+					if server.CurrentSender != tt.expectedSender {
+						t.Errorf("expected CurrentSender=%s, got %s", tt.expectedSender, server.CurrentSender)
+					}
+				}
+			}
+		})
+	}
+}

@@ -105,7 +105,7 @@ func NewModel(database *db.DB) Model {
 		SelectedSummaryIdx: 0,
 		FocusPane:          PaneTopics,
 		Loading:            true,
-		InputMode:          ModeTopicSelect,
+		InputMode:          ModeBrowse,
 		TextInput:          ti,
 		SenderInput:        senderInput,
 		Width:              80,

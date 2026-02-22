@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-02-22
+
+### Added
+- **UI Redesign**: Overhauled the dashboard with a `beads_viewer`-inspired layout.
+  - **Topic Selector Modal**: New popup window for topic selection on startup and via `t` key.
+  - **Enhanced Navigation**: Full support for arrow keys (↑↓←→) and Vim-style (h/j/k/l) across all panes.
+  - **Interactive Posting**: Upgraded `p` key functionality with a multi-column form for editing Sender and Content.
+- **Workflow Standardization**: Integrated `beads-rust` (br) for granular task tracking and collaboration between human and agents.
+
+### Improved
+- **Environment Cleanup**: Updated `Taskfile.yml` to ensure all binaries are strictly managed within `bin/` and old artifacts are cleared from the root.
+- **Release Stability**: Verified all binaries match the latest implementation timestamps.
+
 ## [0.0.6] - 2026-02-19
 
 ### Added

@@ -2,8 +2,7 @@ version: '3'
 
 vars:
   PROJECT_NAME: agent-hub-mcp
-  BINARIES:
-    sh: echo "agent-hub dashboard client"
+  BIN_DIR: bin
 
 tasks:
   default:
@@ -14,31 +13,36 @@ tasks:
   build:
     desc: Build all binaries (agent-hub, dashboard, client)
     cmds:
-      - go build -o bin/agent-hub ./cmd/agent-hub
-      - go build -o bin/dashboard ./cmd/dashboard
-      - go build -o bin/client ./cmd/client
+      - task: build:agent-hub
+      - task: build:dashboard
+      - task: build:client
 
   build:agent-hub:
-    desc: Build agent-hub binary only
+    desc: Build agent-hub binary
     cmds:
-      - go build -o bin/agent-hub ./cmd/agent-hub
+      - go build -o {{.BIN_DIR}}/agent-hub ./cmd/agent-hub
 
   build:dashboard:
-    desc: Build dashboard binary only
+    desc: Build dashboard binary
     cmds:
-      - go build -o bin/dashboard ./cmd/dashboard
+      - go build -o {{.BIN_DIR}}/dashboard ./cmd/dashboard
 
   build:client:
-    desc: Build client binary only
+    desc: Build client binary
     cmds:
-      - go build -o bin/client ./cmd/client
+      - go build -o {{.BIN_DIR}}/client ./cmd/client
 
   run:
-    desc: Run agent-hub server
+    desc: Run agent-hub server (stdio mode)
     cmds:
       - ./bin/agent-hub serve
     env:
-      BBS_AGENT_ID: '{{.BBS_AGENT_ID | default "dev-agent"}}'
+      BBS_AGENT_ID: '{{.BBS_AGENT_ID | default "dev-human"}}'
+
+  setup:mcp:
+    desc: Start agent-hub MCP server (SSE mode) on port 8080
+    cmds:
+      - ./bin/agent-hub serve -sse :8080
 
   run:orchestrator:
     desc: Run agent-hub orchestrator
@@ -49,6 +53,16 @@ tasks:
     desc: Run TUI dashboard
     cmds:
       - ./bin/dashboard
+
+  setup:
+    desc: Run initial setup
+    cmds:
+      - ./bin/agent-hub setup
+
+  doctor:
+    desc: Run system diagnostics
+    cmds:
+      - ./bin/agent-hub doctor
 
   test:
     desc: Run all Go tests
@@ -65,35 +79,23 @@ tasks:
     cmds:
       - go test -v -coverprofile=coverage.out ./...
       - go tool cover -html=coverage.out -o coverage.html
-      - echo "Coverage report generated: coverage.html"
 
   fmt:
-    desc: Format Go code
+    desc: Format Go code using goimports
     cmds:
-      - go fmt ./...
+      - goimports -w .
 
   lint:
-    desc: Run Go linters
+    desc: Run golangci-lint
     cmds:
-      - go vet ./...
+      - golangci-lint run --fix
 
   clean:
-    desc: Clean build artifacts
+    desc: Clean build artifacts from bin/ and root
     cmds:
-      - rm -rf bin/
+      - rm -rf {{.BIN_DIR}}/
+      - rm -f agent-hub dashboard client
       - rm -f coverage.out coverage.html
-
-  install:tools:
-    desc: Install Go development tools
-    cmds:
-      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-  ci:lint:
-    desc: Run full linting (for CI)
-    cmds:
-      - task: fmt
-      - task: lint
-      - golangci-lint run
 
   ci:test:
     desc: Run full test suite (for CI)

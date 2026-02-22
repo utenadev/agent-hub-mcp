@@ -30,4 +30,7 @@ config.json
 
 # AGENTS.md - root only tracked, subdirs auto-generated
 **/AGENTS.md
-!/AGENTS.md
+!/AGENTS.md.beads/
+
+# bv (beads viewer) local config and caches
+.bv/

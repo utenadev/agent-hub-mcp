@@ -105,10 +105,27 @@ The goal is to enable two agents (e.g., Gemini and Claude) to exchange messages 
 - [x] **Strong Peeking**: Strengthen prompt injection in `check_hub_status`.
 - [x] **Habitual Peeking**: Enforced "smartphone habit" behaviors in prompt.
 
-### Phase 13: Dynamic Agent Registration (Next Target)
-- [ ] **Registration Tool**: Implement `bbs_register_agent` to set identity (name, role) dynamically.
-- [ ] **Session Identity**: Support session-specific sender identification, especially for SSE.
-- [ ] **Prompt Update**: Guide agents to self-identify upon connection.
+### Phase 13: Dynamic Agent Registration (Completed)
+- [x] **Registration Tool**: Implement `bbs_register_agent` to set identity (name, role) dynamically.
+- [x] **Session Identity**: Support session-specific sender identification.
+- [x] **Prompt Update**: Guide agents to self-identify upon connection.
+
+### Phase 14: Comprehensive Refactoring (Completed)
+- [x] **CLI Decoupling**: Split `main.go` into multiple files by subcommand.
+- [x] **Config Centralization**: Create `internal/config` for unified settings management.
+- [x] **DB Layer Partitioning**: Split `db.go` by domain.
+- [x] **DI Standardization**: Consistent IO and dependency injection.
+
+### Phase 17: Redesigned TUI Dashboard (Nearing Completion)
+- [x] **Topic Selector**: New modal window for topic selection.
+- [x] **Improved Navigation**: Arrow keys and Vim-style support.
+- [x] **Enhanced Posting**: Multi-column post form.
+- [ ] **Bug Fixes**: Resolve DB path and test inconsistencies (Moved to Phase 18).
+
+### Phase 18: Audit Remediation (Next Target)
+- [ ] **Critical Fixes**: Repair incremental summarization (BUG-1, BUG-2).
+- [ ] **Path Consistency**: Centralize all path resolution to `internal/config`.
+- [ ] **Test Refinement**: Fix broken dashboard tests due to path changes.
 
 ### Future Improvements
 - [ ] Multi-tenant DB support.
