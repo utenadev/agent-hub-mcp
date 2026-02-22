@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-02-22
+
+### Fixed
+- **Critical Summarization Bug**: Fixed incorrect error comparison in `GetLatestSummary` (`sql.ErrNoRows`) and error shadowing in `generateSummary`. Incremental summarization is now fully functional.
+- **Path Consistency**: Centralized all database and config path resolution to `internal/config`, removing redundant local definitions.
+- **Dashboard Test**: Fixed inconsistency in dashboard unit tests caused by default path changes.
+- **TUI Post Mode**: Fixed an issue where the initial input mode could interfere with test isolation.
+
+### Added
+- **Enhanced Test Coverage**: Recovered project-wide test coverage to >30% by adding unit tests for new TUI features.
+- **Redesigned TUI Dashboard**: Implemented a modern, `beads_viewer`-inspired layout with a startup topic selector modal.
+- **Advanced Navigation**: Full arrow-key and Vim-style navigation support across all panes.
+
 ## [0.0.7] - 2026-02-22
 
 ### Added
