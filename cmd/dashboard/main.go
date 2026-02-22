@@ -7,6 +7,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/yklcs/agent-hub-mcp/internal/config"
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 	"github.com/yklcs/agent-hub-mcp/internal/ui"
 )
@@ -37,7 +38,7 @@ func main() {
 
 // Run executes the application with given arguments and IO
 func (a *DashboardApp) Run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	dbPath := "agent-hub.db"
+	dbPath := config.DefaultDBPath()
 	if len(args) > 1 {
 		dbPath = args[1]
 	}
