@@ -59,6 +59,12 @@ tasks:
     cmds:
       - ./bin/agent-hub setup
 
+  setup:beads:
+    desc: Initialize beads-rust and configure .gitignore
+    cmds:
+      - br init
+      - grep -q ".beads/" .gitignore || (echo ".beads/" >> .gitignore && echo "Added .beads/ to .gitignore")
+
   doctor:
     desc: Run system diagnostics
     cmds:
