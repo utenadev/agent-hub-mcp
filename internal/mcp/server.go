@@ -11,6 +11,16 @@ import (
 	"github.com/yklcs/agent-hub-mcp/internal/db"
 )
 
+// sendResourceListChanged sends a notifications/resources/list_changed notification to the client.
+func (s *Server) sendResourceListChanged(ctx context.Context) {
+	mcpServer := server.ServerFromContext(ctx)
+	if mcpServer != nil {
+		if err := mcpServer.SendNotificationToClient(ctx, "notifications/resources/list_changed", nil); err != nil {
+			log.Printf("Failed to send resource list changed notification: %v", err)
+		}
+	}
+}
+
 // Server wraps the MCP server with our database.
 type Server struct {
 	mcpServer     *server.MCPServer
@@ -189,6 +199,26 @@ func (s *Server) registerResources() {
 			mcp.TextResourceContents{
 				URI:      "guidelines://agent-collaboration",
 				MIMEType: "text/markdown",
+				Text:     content,
+			},
+		}, nil
+	})
+
+	// Register latest-notification resource
+	latestNotificationResource := mcp.NewResource(
+		"hub://latest-notification",
+		"Latest BBS Notification",
+		mcp.WithResourceDescription("Most recent notification from BBS activity"),
+		mcp.WithMIMEType("application/json"),
+	)
+
+	s.mcpServer.AddResource(latestNotificationResource, func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		// Return latest notification info
+		content := `{"message": "Use check_hub_status to get latest notifications"}`
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "hub://latest-notification",
+				MIMEType: "application/json",
 				Text:     content,
 			},
 		}, nil

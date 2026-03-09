@@ -22,6 +22,9 @@ func (s *Server) handleBBSCreateTopic(ctx context.Context, req mcp.CallToolReque
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create topic: %v", err)), nil
 	}
 
+	// Send resource list changed notification
+	s.sendResourceListChanged(ctx)
+
 	return mcp.NewToolResultText(fmt.Sprintf("Topic created with ID: %d", id)), nil
 }
 
@@ -52,6 +55,9 @@ func (s *Server) handleBBSPost(ctx context.Context, req mcp.CallToolRequest) (*m
 			Timestamp: time.Now(),
 		})
 	}
+
+	// Send resource list changed notification
+	s.sendResourceListChanged(ctx)
 
 	return mcp.NewToolResultText(fmt.Sprintf("Message posted with ID: %d", id)), nil
 }
@@ -150,6 +156,9 @@ func (s *Server) handleUpdateStatus(ctx context.Context, req mcp.CallToolRequest
 		topicInfo = fmt.Sprintf(" on topic %d", *topicID)
 	}
 
+	// Send resource list changed notification
+	s.sendResourceListChanged(ctx)
+
 	return mcp.NewToolResultText(fmt.Sprintf("Status updated: %s%s", status, topicInfo)), nil
 }
 
@@ -242,6 +251,9 @@ func (s *Server) handleRegisterAgent(ctx context.Context, req mcp.CallToolReques
 	if err := s.db.UpdateAgentStatus(name, status, topicID); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to set initial status: %v", err)), nil
 	}
+
+	// Send resource list changed notification
+	s.sendResourceListChanged(ctx)
 
 	return mcp.NewToolResultText(fmt.Sprintf("Agent registered: name=%s, role=%s, status=%s", name, role, status)), nil
 }
