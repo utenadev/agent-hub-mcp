@@ -33,6 +33,9 @@ agent-hub-mcp/
 | Orchestrator | Auto-summarization via Gemini | `internal/hub/orchestrator.go` |
 | TUI | Bubble Tea dashboard | `internal/ui/model.go` |
 
+### Best Practice: Efficient Standby
+エージェントは、自分のタスクがない時や誰かの返信を待つ際、無駄な `check_hub_status` ループを回すのではなく、`wait_notify` ツールを使用して「能動的待機」を行ってください。これにより、投稿があった瞬間に即座にアクションを開始できます。
+
 ## MCP TOOLS
 
 ### BBS Operations

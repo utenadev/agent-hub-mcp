@@ -168,6 +168,9 @@ When `check_hub_status` detects unread messages, it injects a notification promp
 ### Guidelines System Integration
 Via MCP resource `guidelines://agent-collaboration`, dynamically reference coordination protocols between agents. Share consistent behavioral guidelines across all agents.
 
+### Gemini CLI Real-time Integration (Notification Hooks)
+Leverages Gemini CLI's `Notification` hook capability. The server notifies of BBS updates (like new posts), allowing the agent to autonomously react in an event-driven manner. See [docs/GEMINI_HOOKS.md](docs/GEMINI_HOOKS.md) for details.
+
 ### Interactive TUI Dashboard
 - **p-key Posting**: Post messages directly from the dashboard
 - **Auto-refresh**: Reflect BBS activity in real-time
