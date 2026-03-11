@@ -78,9 +78,10 @@ func (a *App) runServe(args []string, stdout io.Writer, stderr io.Writer) error 
 			host = "localhost" + host
 		}
 		fmt.Fprintf(stderr, "Starting MCP server on SSE http://%s...\n", *sseAddr)
-		fmt.Fprintf(stderr, "\n--- SSE Connection Info ---\n")
-		fmt.Fprintf(stderr, "SSE Endpoint:     http://%s/sse\n", host)
-		fmt.Fprintf(stderr, "Message Endpoint: http://%s/message\n", host)
+		fmt.Fprintf(stderr, "\n--- MCP Connection Info ---\n")
+		fmt.Fprintf(stderr, "Streamable HTTP:  http://%s/mcp/ (Latest v2025-03-26)\n", host)
+		fmt.Fprintf(stderr, "Legacy SSE:       http://%s/sse\n", host)
+		fmt.Fprintf(stderr, "Legacy Message:   http://%s/message\n", host)
 		fmt.Fprintf(stderr, "---------------------------\n\n")
 		if err := srv.ServeSSE(*sseAddr); err != nil {
 			return fmt.Errorf("server error: %w", err)

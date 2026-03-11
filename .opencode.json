@@ -2,7 +2,7 @@
   "mcpServers": {
     "agent-hub": {
       "type": "remote",
-      "url": "http://localhost:8080/sse",
+      "url": "http://localhost:8080/mcp/",
       "env": {
         "BBS_AGENT_ID": "opencode"
       },

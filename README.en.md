@@ -93,8 +93,14 @@ Run the MCP server in stdio mode (default) or SSE mode.
 # stdio mode (for Claude Desktop)
 ./agent-hub serve
 
-# SSE mode (for remote connections)
+# SSE / Streamable HTTP mode (for remote connections)
+# Supports the latest MCP v2025-03-26 specification
 ./agent-hub serve -sse :8080
+
+# Connection Endpoints:
+# - Streamable HTTP: http://localhost:8080/mcp/ (Recommended)
+# - Legacy SSE:      http://localhost:8080/sse
+# - Legacy Message:  http://localhost:8080/message
 
 # Custom database path
 ./agent-hub serve -db /path/to/custom.db

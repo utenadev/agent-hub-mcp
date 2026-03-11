@@ -231,6 +231,26 @@ func (s *Server) Serve() error {
 	return server.ServeStdio(s.mcpServer)
 }
 
+// NewStreamableHTTPHandler returns an http.Handler for the MCP Streamable HTTP transport.
+func (s *Server) NewStreamableHTTPHandler() http.Handler {
+	baseHandler := server.NewStreamableHTTPServer(s.mcpServer)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Protocol-Version")
+
+		// Handle Preflight (OPTIONS) requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		baseHandler.ServeHTTP(w, r)
+	})
+}
+
 // ServeSSE starts the MCP server on an HTTP endpoint with SSE.
 func (s *Server) ServeSSE(addr string) error {
 	log.Printf("Starting MCP server on SSE http://%s...", addr)
@@ -241,6 +261,7 @@ func (s *Server) ServeSSE(addr string) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/", sseServer)
+	mux.Handle("/mcp/", s.NewStreamableHTTPHandler())
 
 	srv := &http.Server{
 		Addr:    addr,

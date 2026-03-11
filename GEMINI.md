@@ -16,7 +16,8 @@ Phase 4 has been completed. Currently focusing on CLI usability and stability.
 - **TUI Dashboard**: 3-pane layout with message posting, auto-refresh (10s), and presence display.
 - **CLI Commands**: `serve`, `orchestrator`, `doctor`, `setup`, `help`.
 - **Presence**: Real-time status tracking via `agent_presence` table.
-- **SSE Support**: First-class SSE support with connection guidance.
+- **Streamable HTTP**: Support for MCP v2025-03-26 via `/mcp/` endpoint.
+- **SSE Support**: Legacy SSE support at `/sse` and `/message`.
 
 ## Architecture
 
